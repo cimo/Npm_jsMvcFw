@@ -1,0 +1,23 @@
+{
+    "editor.formatOnSave": false,
+    "eslint.format.enable": true,
+    "eslint.workingDirectories": ["./src"],
+    "[dockercompose]": {
+        "editor.defaultFormatter": "ms-azuretools.vscode-docker"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    "[typescriptreact]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    },
+    "[javascript]": {
+        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    }
+}
