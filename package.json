@@ -6,7 +6,7 @@
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/cimo/JsMvcFw.git"
+        "url": "https://github.com/cimo/JsMvcFw.git"
     },
     "main": "./dist/index.js",
     "scripts": {
