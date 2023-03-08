@@ -30,7 +30,7 @@ const variableState = (variableValue) => {
     const randomTag = Math.floor(Math.random() * 1000000).toString();
     let privateValue = variableValue;
     const privateEvent = new Event(randomTag);
-    const x = {
+    return {
         set state(stateValue) {
             privateValue = stateValue;
             document.dispatchEvent(privateEvent);
@@ -46,7 +46,6 @@ const variableState = (variableValue) => {
             });
         }
     };
-    return x;
 };
 exports.variableState = variableState;
 const writeCookieEncoded = (tag, value, path = "/", time = TIME_COOKIE) => {

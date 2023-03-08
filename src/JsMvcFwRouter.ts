@@ -1,13 +1,13 @@
 import { JSMVCFW_PUBLIC_PATH } from "./JsMvcFwConstant";
-import { Router, Controller, VariableState } from "./JsMvcFwInterface";
+import { Irouter, Icontroller, IvariableState } from "./JsMvcFwInterface";
 import { writeLog } from "./JsMvcFw";
 
 let elementRoot: Element | null = null;
-let routerList: Router[] = [];
-const controllerList: Controller[] = [];
-const variableList: Record<string, VariableState>[] = [];
+let routerList: Irouter[] = [];
+const controllerList: Icontroller[] = [];
+const variableList: Record<string, IvariableState>[] = [];
 
-export const routerInit = (value: Router[]) => {
+export const routerInit = (value: Irouter[]) => {
     elementRoot = document.querySelector("#jsmvcfw_app");
     routerList = value;
 
@@ -65,15 +65,17 @@ export const navigateTo = (event: Event | undefined, nextUrl: string, parameterL
     populatePage(true, nextUrl, parameterList, parameterSearch);
 };
 
-export const checkPreviousUrl = (): boolean => {
+/*export const checkPreviousUrl = (): boolean => {
     let result = false;
 
-    result = routerList.includes(window.history.state.previousUrl);
+    const state = window.history.state as IwindowHistory;
+
+    result = routerList.includes(state.previousUrl);
 
     writeLog("JsMvcFwRouter.ts", "checkPreviousUrl", { result });
 
     return result;
-};
+};*/
 
 const populatePage = (isHistoryPushEnabled: boolean, nextUrl: string, parameterList?: Record<string, unknown>, parameterSearch?: string) => {
     let isNotFound = false;

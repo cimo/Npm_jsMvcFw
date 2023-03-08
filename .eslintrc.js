@@ -2,6 +2,7 @@ module.exports = {
     extends: ["eslint:recommended", "plugin:@typescript-eslint/recommended", "plugin:@typescript-eslint/recommended-requiring-type-checking"],
     parser: "@typescript-eslint/parser",
     plugins: ["@typescript-eslint"],
+    ignorePatterns: ["**/*.js", "dist", "node_modules"],
     root: true,
     parserOptions: {
         project: true,

@@ -12,10 +12,11 @@ const storeSet = (tag, valueList) => {
 };
 exports.storeSet = storeSet;
 const storeGet = (tag) => {
-    let resultList = { data: {} };
+    const resultList = { data: {} };
     const storageItem = localStorage.getItem(tag);
     if (storageItem) {
-        resultList.data = JSON.parse(storageItem).data;
+        const itemList = JSON.parse(storageItem);
+        resultList.data = itemList.data;
     }
     (0, JsMvcFw_1.writeLog)("JsMvcFwStore.ts", "storeGet", { tag, resultList });
     return resultList;

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkPreviousUrl = exports.navigateTo = exports.routerInit = void 0;
+exports.navigateTo = exports.routerInit = void 0;
 const JsMvcFwConstant_1 = require("./JsMvcFwConstant");
 const JsMvcFw_1 = require("./JsMvcFw");
 let elementRoot = null;
@@ -48,13 +48,6 @@ const navigateTo = (event, nextUrl, parameterList, parameterSearch) => {
     populatePage(true, nextUrl, parameterList, parameterSearch);
 };
 exports.navigateTo = navigateTo;
-const checkPreviousUrl = () => {
-    let result = false;
-    result = routerList.includes(window.history.state.previousUrl);
-    (0, JsMvcFw_1.writeLog)("JsMvcFwRouter.ts", "checkPreviousUrl", { result });
-    return result;
-};
-exports.checkPreviousUrl = checkPreviousUrl;
 const populatePage = (isHistoryPushEnabled, nextUrl, parameterList, parameterSearch) => {
     let isNotFound = false;
     if (elementRoot) {

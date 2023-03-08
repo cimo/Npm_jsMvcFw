@@ -1,5 +1,5 @@
 import { JSMVCFW_DEBUG } from "./JsMvcFwConstant";
-import { VariableState } from "./JsMvcFwInterface";
+import { IvariableState } from "./JsMvcFwInterface";
 
 const TIME_COOKIE = 60 * 60 * 24 * 365;
 let isDebug = false;
@@ -29,7 +29,7 @@ export const checkEnvVariable = (key: string, value: string): string => {
     return value;
 };
 
-export const variableState = <T extends unknown>(variableValue: T): VariableState => {
+export const variableState = <T>(variableValue: T): IvariableState => {
     writeLog("JsMvcFw.ts", "variableState", { this: this, variableValue });
 
     const randomTag = Math.floor(Math.random() * 1000000).toString();
@@ -38,7 +38,7 @@ export const variableState = <T extends unknown>(variableValue: T): VariableStat
     let privateValue: T = variableValue;
     const privateEvent = new Event(randomTag);
 
-    const x = {
+    return {
         set state(stateValue) {
             privateValue = stateValue;
 
@@ -54,9 +54,7 @@ export const variableState = <T extends unknown>(variableValue: T): VariableStat
                 }
             });
         }
-    } as VariableState
-
-    return x;
+    } as IvariableState
 };
 
 export const writeCookieEncoded = (tag: string, value: Record<string, unknown>, path = "/", time = TIME_COOKIE) => {
@@ -67,11 +65,11 @@ export const writeCookieEncoded = (tag: string, value: Record<string, unknown>, 
     document.cookie = `${tag}=${valueEncoded};path=${path};max-age=${time};secure;samesite`;
 };
 
-export const readCookieDecoded = <T extends unknown>(tag: string): T => {
+export const readCookieDecoded = <T>(tag: string): T => {
     const result = document.cookie.match(new RegExp(`${tag}=([^;]+)`));
 
     if (result) {
-        const valueDecoded = JSON.parse(decodeURIComponent(window.atob(result[1])));
+        const valueDecoded = JSON.parse(decodeURIComponent(window.atob(result[1]))) as object;
 
         writeLog("JsMvcFw.ts", "storeReadCookie", { valueDecoded });
 

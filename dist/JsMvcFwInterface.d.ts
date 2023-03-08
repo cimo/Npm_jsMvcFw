@@ -1,18 +1,26 @@
-export interface Router {
+export interface IvariableState {
+    state: unknown;
+    listener: (callback: <T>(state: T) => void) => void;
+}
+export interface Irouter {
     title: string;
     path: string;
-    controller(): Controller;
+    controller(): Icontroller;
 }
-export interface Controller {
-    variableList: <VariableState>() => Record<string, VariableState>;
-    create: (variableList: Record<string, VariableState>) => void;
-    view: (variableList: Record<string, VariableState>) => string;
-    event: (variableList: Record<string, VariableState>) => void;
-    destroy: (variableList: Record<string, VariableState>) => void;
+export interface Icontroller {
+    variableList: () => Record<string, IvariableState>;
+    create: (variableList: Record<string, IvariableState>) => void;
+    view: (variableList: Record<string, IvariableState>) => string;
+    event: (variableList: Record<string, IvariableState>) => void;
+    destroy: (variableList: Record<string, IvariableState>) => void;
 }
-export interface View {
+export interface Iview {
     content: string;
 }
-export interface ItemList {
-    data: Record<string, any>;
+export interface IitemList {
+    data: Record<string, unknown>;
+}
+export interface IwindowHistory {
+    previousUrl: string;
+    parameterList?: Record<string, unknown>;
 }
