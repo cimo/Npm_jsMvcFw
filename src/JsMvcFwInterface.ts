@@ -1,6 +1,6 @@
 export interface IvariableState {
     state: unknown,
-    listener: (callback: <T>(state: T) => void) => void
+    listener: (callback: <T>(parameter: T) => void) => void
 }
 
 export interface Irouter {
