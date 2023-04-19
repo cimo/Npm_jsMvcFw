@@ -1,31 +1,22 @@
 {
-    "editor.formatOnSave": false,
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+        "source.fixAll": true
+    },
     "eslint.format.enable": true,
-    "eslint.workingDirectories": ["./src"],
+    "javascript.validate.enable": false,
     "docker.commands.attach": "${containerCommand} exec -it ${containerId} bash",
     "[dockercompose]": {
         "editor.defaultFormatter": "ms-azuretools.vscode-docker"
     },
-    "[json]": {
-        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-    },
-    "[jsonc]": {
-        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+    "[dockerfile]": {
+        "editor.defaultFormatter": "ms-azuretools.vscode-docker"
     },
     "[typescript]": {
-        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-    },
-    "[typescriptreact]": {
-        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
+        "editor.formatOnSave": false
     },
     "[javascript]": {
-        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-    },
-    "[scss]": {
-        "editor.defaultFormatter": "dbaeumer.vscode-eslint"
-    },
-    "python.formatting.provider": "autopep8",
-    "[python]": {
-        "editor.formatOnType": true
+        "editor.formatOnSave": false
     }
 }

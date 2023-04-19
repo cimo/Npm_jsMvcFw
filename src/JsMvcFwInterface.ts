@@ -1,12 +1,12 @@
-export interface IvariableState {
-    state: unknown,
-    listener: (callback: <T>(parameter: T) => void) => void
-}
-
 export interface Irouter {
     title: string;
     path: string;
     controller(): Icontroller;
+}
+
+export interface IvariableState {
+    state: unknown;
+    listener: (callback: <T>(parameter: T) => void) => void;
 }
 
 export interface Icontroller {
@@ -22,7 +22,7 @@ export interface Iview {
 }
 
 export interface IitemList {
-    data: Record<string, unknown>
+    data: Record<string, unknown>;
 }
 
 export interface IwindowHistory {

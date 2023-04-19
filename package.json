@@ -10,15 +10,18 @@
     },
     "main": "./dist/index.js",
     "scripts": {
-        "preinstall": "npm install --package-lock-only --ignore-scripts --no-audit && npx npm-force-resolutions@0.0.3",
-        "check": "eslint . --ext .ts --fix",
-        "build": "tsc --build -clean && tsc --build"
+        "preinstall": "npm install --package-lock-only --ignore-scripts --no-audit && npx --yes npm-force-resolutions@0.0.3",
+        "check": "eslint . --fix",
+        "build": "npm run check && tsc --build -clean && tsc --build"
     },
     "dependencies": {},
     "devDependencies": {
         "typescript": "4.9.4",
-        "eslint": "8.35.0",
         "tslib": "2.5.0",
+        "eslint": "8.35.0",
+        "prettier": "2.8.7",
+        "eslint-plugin-prettier": "4.2.1",
+        "eslint-config-prettier": "8.8.0",
         "@types/node": "18.14.4",
         "@typescript-eslint/parser": "5.54.0",
         "@typescript-eslint/eslint-plugin": "5.54.0"
@@ -27,6 +30,15 @@
         "node-fetch": "2.6.7",
         "**/node-fetch": "2.6.7"
     },
-    "types":"./dist/index.d.ts",
-    "files": ["./dist/"]
+    "types": "./dist/index.d.ts",
+    "files": [
+        "./dist/"
+    ],
+    "keywords": [
+        "mvc",
+        "mvc framework",
+        "nodejs",
+        "typescript",
+        "cimo"
+    ]
 }

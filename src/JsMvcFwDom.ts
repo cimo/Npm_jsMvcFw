@@ -30,4 +30,4 @@ const clearHtml = (html: string) => {
     const text = parser.parseFromString(html, "text/html");
 
     return text.body;
-}
+};

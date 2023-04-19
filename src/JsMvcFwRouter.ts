@@ -34,7 +34,7 @@ export const routerInit = (value: Irouter[]) => {
 
             populatePage(false, window.location.pathname);
         }
-    }
+    };
 
     window.onpopstate = (event: PopStateEvent) => {
         writeLog("JsMvcFwRouter.ts", "onpopstate", { pathname: window.location.pathname });

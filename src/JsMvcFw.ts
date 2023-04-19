@@ -12,6 +12,7 @@ export const mainInit = (isDebugValue = false) => {
 
 export const writeLog = (file: string, tag: string, value: Record<string, unknown>) => {
     if (JSMVCFW_DEBUG && isDebug) {
+        // eslint-disable-next-line no-console
         console.log(`writeLog => ${file} - ${tag}: `, value);
     }
 };
@@ -54,7 +55,7 @@ export const variableState = <T>(variableValue: T): IvariableState => {
                 }
             });
         }
-    } as IvariableState
+    } as IvariableState;
 };
 
 export const writeCookieEncoded = (tag: string, value: Record<string, unknown>, path = "/", time = TIME_COOKIE) => {

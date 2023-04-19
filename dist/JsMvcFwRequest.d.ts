@@ -1,1 +1,0 @@
-export declare const sendRequest: <T>(url: string, method: string, data?: Record<string, unknown>, headersValue?: HeadersInit, modeValue?: RequestMode, cacheValue?: RequestCache, credentialsValue?: RequestCredentials, redirectValue?: RequestRedirect, referrerPolicyValue?: ReferrerPolicy) => Promise<T>;
