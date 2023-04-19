@@ -1,6 +1,5 @@
-import { JSMVCFW_PUBLIC_PATH } from "./JsMvcFwConstant";
 import { Irouter, Icontroller, IvariableState } from "./JsMvcFwInterface";
-import { writeLog } from "./JsMvcFw";
+import { publicPath, writeLog } from "./JsMvcFw";
 
 let elementRoot: Element | null = null;
 let routerList: Irouter[] = [];
@@ -83,8 +82,8 @@ const populatePage = (isHistoryPushEnabled: boolean, nextUrl: string, parameterL
     if (elementRoot) {
         for (const [key, value] of routerList.entries()) {
             if (value.path === nextUrl) {
-                if (isHistoryPushEnabled && JSMVCFW_PUBLIC_PATH) {
-                    const publicPathReplace = JSMVCFW_PUBLIC_PATH.replace(/\/+$/, "");
+                if (isHistoryPushEnabled && publicPath) {
+                    const publicPathReplace = publicPath.replace(/\/+$/, "");
                     const newUrl = publicPathReplace + nextUrl;
 
                     window.history.pushState({ previousUrl: window.location.pathname, parameterList }, "", newUrl);

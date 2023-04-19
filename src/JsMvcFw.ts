@@ -1,17 +1,19 @@
-import { JSMVCFW_DEBUG } from "./JsMvcFwConstant";
 import { IvariableState } from "./JsMvcFwInterface";
 
 const TIME_COOKIE = 60 * 60 * 24 * 365;
 let isDebug = false;
 
-export const mainInit = (isDebugValue = false) => {
-    isDebug = isDebugValue;
+export let publicPath = "";
 
-    writeLog("JsMvcFw.ts", "mainInit", { isDebug });
+export const mainInit = (isDebugValue = false, publicPathValue = "/") => {
+    isDebug = isDebugValue;
+    publicPath = publicPathValue;
+
+    writeLog("JsMvcFw.ts", "mainInit", { isDebug, publicPath });
 };
 
 export const writeLog = (file: string, tag: string, value: Record<string, unknown>) => {
-    if (JSMVCFW_DEBUG && isDebug) {
+    if (isDebug) {
         // eslint-disable-next-line no-console
         console.log(`writeLog => ${file} - ${tag}: `, value);
     }
