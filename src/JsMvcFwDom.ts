@@ -25,9 +25,9 @@ export const parseView = (html: string): string => {
     return result;
 };
 
-const clearHtml = (html: string) => {
+/*const clearHtml = (html: string) => {
     const parser = new DOMParser();
     const text = parser.parseFromString(html, "text/html");
 
     return text.body;
-};
+};*/

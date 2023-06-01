@@ -7,5 +7,6 @@ Mvc javascript framework.
 1. Write on terminal:
 
 ```
+npm isntall
 npm run build
 ```
