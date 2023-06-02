@@ -9,7 +9,7 @@
         "url": "https://github.com/cimo/JsMvcFw.git"
     },
     "scripts": {
-        "preinstall": "npm install --package-lock-only --ignore-scripts --no-audit && npx --yes npm-force-resolutions@0.0.3",
+        "preinstall": "([ ! -f package-lock.json ] && npm install --package-lock-only --ignore-scripts --no-audit); npx npm-force-resolutions",
         "check": "eslint . --fix",
         "build": "npm run check && tsc --build -clean && tsc --build tsconfig.build.json"
     },
