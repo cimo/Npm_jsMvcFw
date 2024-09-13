@@ -18,7 +18,7 @@ export const parseView = (html: string): string => {
     const parser = new DOMParser();
     const test = parser.parseFromString(html, "text/html");
 
-    writeLog("JsMvcFwDom.ts", "parseView", { test });
+    writeLog("JsMvcFwDom.ts - parseView", { test });
 
     const result = html;
 

@@ -1,7 +1,7 @@
 {
     "name": "@cimo/jsmvcfw",
     "version": "1.0.0",
-    "description": "Javascript mvc framework",
+    "description": "Javascript mvc framework. Light, fast and secure.",
     "author": "cimo",
     "license": "MIT",
     "repository": {
@@ -9,9 +9,10 @@
         "url": "https://github.com/cimo/JsMvcFw.git"
     },
     "scripts": {
-        "preinstall": "([ ! -f package-lock.json ] && npm install --package-lock-only --ignore-scripts --no-audit); npx npm-force-resolutions",
-        "check": "eslint . --fix",
-        "build": "npm run check && tsc --build -clean && tsc --build tsconfig.build.json"
+        "remove_dist": "node -e \"const fs = require('fs'); try{ fs.rmdirSync('./dist/', { recursive: true }) } catch{}; process.exit(0);\"",
+        "check": "eslint --fix",
+        "build": "npm run remove_dist && npm run check && tsc --build tsconfig.build.json",
+        "pack": "npm run build && npm pack"
     },
     "dependencies": {},
     "devDependencies": {
@@ -22,23 +23,20 @@
         "eslint-plugin-prettier": "4.2.1",
         "eslint-config-prettier": "8.8.0",
         "prettier": "2.8.7",
-        "typescript": "4.9.4",
-        "tslib": "2.5.0"
-    },
-    "resolutions": {
-        "node-fetch": "2.6.7",
-        "**/node-fetch": "2.6.7"
+        "typescript": "4.9.4"
     },
     "files": [
         "./dist/"
     ],
-    "main": "./dist/index.js",
-    "types": "./dist/index.d.ts",
+    "main": "./dist/Main.js",
+    "types": "./dist/Main.d.ts",
     "keywords": [
         "mvc",
         "mvc framework",
         "nodejs",
         "typescript",
-        "cimo"
+        "cimo",
+        "native",
+        "no dependencies"
     ]
 }

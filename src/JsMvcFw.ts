@@ -1,26 +1,25 @@
 import { IvariableState } from "./JsMvcFwInterface";
 
-const TIME_COOKIE = 60 * 60 * 24 * 365;
 let isDebug = false;
 
-export let publicPath = "";
+export let urlRoot = "";
 
-export const mainInit = (isDebugValue = false, publicPathValue = "/") => {
+export const mainInit = (isDebugValue = false, urlRootValue = "/") => {
     isDebug = isDebugValue;
-    publicPath = publicPathValue;
+    urlRoot = urlRootValue;
 
-    writeLog("JsMvcFw.ts", "mainInit", { isDebug, publicPath });
+    writeLog("JsMvcFw.ts - mainInit", { isDebug, urlRoot });
 };
 
-export const writeLog = (file: string, tag: string, value: Record<string, unknown>) => {
+export const writeLog = (tag: string, value: string | Record<string, unknown>) => {
     if (isDebug) {
         // eslint-disable-next-line no-console
-        console.log(`writeLog => ${file} - ${tag}: `, value);
+        console.log(`WriteLog => ${tag}: `, value);
     }
 };
 
-export const checkEnvVariable = (key: string, value: string): string => {
-    writeLog("JsMvcFw.ts", "checkEnvVariable", { key, value });
+export const checkEnv = (key: string, value: string): string => {
+    writeLog("JsMvcFw.ts - checkEnv", { key, value });
 
     if (value === undefined) {
         const text = `${key} is not defined!`;
@@ -32,11 +31,41 @@ export const checkEnvVariable = (key: string, value: string): string => {
     return value;
 };
 
+export const writeCookie = <T>(tag: string, value: T, expire = "", httpOnly = "", path = "/"): void => {
+    const encodedData = window.btoa(encodeURIComponent(JSON.stringify(value)));
+
+    document.cookie = `${tag}=${encodedData};expires=${expire};${httpOnly};path=${path};Secure`;
+};
+
+export const readCookie = <T>(tag: string): T | undefined => {
+    let result: T | undefined;
+
+    const name = escapeRegExp(tag);
+    const resultMatch = document.cookie.match(new RegExp(`${name}=([^;]+)`));
+
+    if (resultMatch) {
+        let cookie = resultMatch[1];
+
+        if (isBase64(cookie.replaceAll('"', ""))) {
+            cookie = window.atob(cookie.replaceAll('"', ""));
+        }
+
+        const decodeUriCookie = decodeURIComponent(cookie);
+
+        if (isJson(decodeUriCookie)) {
+            result = JSON.parse(decodeUriCookie) as T;
+        } else {
+            result = decodeUriCookie as T;
+        }
+    }
+
+    return result;
+};
+
 export const variableState = <T>(variableValue: T): IvariableState => {
-    writeLog("JsMvcFw.ts", "variableState", { this: this, variableValue });
+    writeLog("JsMvcFw.ts - variableState", { this: this, variableValue });
 
     const randomTag = Math.floor(Math.random() * 1000000).toString();
-    //const randomTag = "test";
 
     let privateValue: T = variableValue;
     const privateEvent = new Event(randomTag);
@@ -60,24 +89,19 @@ export const variableState = <T>(variableValue: T): IvariableState => {
     } as IvariableState;
 };
 
-export const writeCookieEncoded = (tag: string, value: Record<string, unknown>, path = "/", time = TIME_COOKIE) => {
-    const valueEncoded = window.btoa(encodeURIComponent(JSON.stringify(value)));
-
-    writeLog("JsMvcFw.ts", "storeWriteCookie", { valueEncoded });
-
-    document.cookie = `${tag}=${valueEncoded};path=${path};max-age=${time};secure;samesite`;
+const escapeRegExp = (value: string): string => {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
 
-export const readCookieDecoded = <T>(tag: string): T => {
-    const result = document.cookie.match(new RegExp(`${tag}=([^;]+)`));
+const isBase64 = (value: string): boolean => {
+    return /^[A-Za-z0-9+/]*={0,2}$/.test(value) && value.length % 4 === 0;
+};
 
-    if (result) {
-        const valueDecoded = JSON.parse(decodeURIComponent(window.atob(result[1]))) as object;
-
-        writeLog("JsMvcFw.ts", "storeReadCookie", { valueDecoded });
-
-        return valueDecoded as T;
-    }
-
-    return result as T;
+const isJson = (value: string): boolean => {
+    return /^[\],:{}\s]*$/.test(
+        value
+            .replace(/\\["\\/bfnrtu]/g, "@")
+            .replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g, "]")
+            .replace(/(?:^|:|,)(?:\s*\[)+/g, "")
+    );
 };

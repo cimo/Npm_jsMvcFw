@@ -14,6 +14,24 @@ pnpm-debug.log*
 *.sw?
 
 # cimo +
+.cache/*
+.config/*
+.local/*
+.npm/*
+.pki/*
+certificate/*
+!certificate/**/
+certificate/proxy/*
+!certificate/proxy/.gitkeep
 dist/*
+log/*
+!log/.gitkeep
+public/file/*
+!public/file/.gitkeep
+public/js/*
+!public/js/.gitkeep
+public/style/*
+!public/style/.gitkeep
+public/index.html
 node_modules
 package-lock.json

@@ -1,16 +1,16 @@
 import { Irouter, Icontroller, IvariableState } from "./JsMvcFwInterface";
-import { publicPath, writeLog } from "./JsMvcFw";
+import { urlRoot, writeLog } from "./JsMvcFw";
 
 let elementRoot: Element | null = null;
 let routerList: Irouter[] = [];
 const controllerList: Icontroller[] = [];
 const variableList: Record<string, IvariableState>[] = [];
 
-export const routerInit = (value: Irouter[]) => {
+export const routerInit = (routerListValue: Irouter[]) => {
     elementRoot = document.querySelector("#jsmvcfw_app");
-    routerList = value;
+    routerList = routerListValue;
 
-    writeLog("JsMvcFwRouter.ts", "routerInit", { routerList });
+    writeLog("JsMvcFwRouter.ts - routerInit", { routerList });
 
     for (const [key, value] of routerList.entries()) {
         controllerList.push(value.controller());
@@ -18,25 +18,19 @@ export const routerInit = (value: Irouter[]) => {
     }
 
     window.onload = (event: Event) => {
-        writeLog("JsMvcFwRouter.ts", "onload", { pathname: window.location.pathname });
+        writeLog("JsMvcFwRouter.ts - onload", window.location.pathname);
 
         if (event) {
+            populatePage(false, window.location.pathname);
+
             for (const [key, value] of controllerList.entries()) {
                 value.create(variableList[key]);
-
-                /*for (const [keySub, valueSub] of Object.entries(variableList[key])) {
-                    valueSub.listener(() => {
-                        populatePage(false, window.location.pathname);
-                    });
-                }*/
             }
-
-            populatePage(false, window.location.pathname);
         }
     };
 
     window.onpopstate = (event: PopStateEvent) => {
-        writeLog("JsMvcFwRouter.ts", "onpopstate", { pathname: window.location.pathname });
+        writeLog("JsMvcFwRouter.ts - onpopstate", window.location.pathname);
 
         if (event) {
             populatePage(false, window.location.pathname);
@@ -44,7 +38,7 @@ export const routerInit = (value: Irouter[]) => {
     };
 
     window.onunload = (event: Event) => {
-        writeLog("JsMvcFwRouter.ts", "onunload", {});
+        writeLog("JsMvcFwRouter.ts - onunload", { event });
 
         if (event) {
             for (const [key, value] of controllerList.entries()) {
@@ -55,7 +49,7 @@ export const routerInit = (value: Irouter[]) => {
 };
 
 export const navigateTo = (event: Event | undefined, nextUrl: string, parameterList?: Record<string, unknown>, parameterSearch?: string) => {
-    writeLog("JsMvcFwRouter.ts", "navigateTo", { event, nextUrl, parameterList, parameterSearch });
+    writeLog("JsMvcFwRouter.ts - navigateTo", { event, nextUrl, parameterList, parameterSearch });
 
     if (event) {
         event.preventDefault();
@@ -64,29 +58,16 @@ export const navigateTo = (event: Event | undefined, nextUrl: string, parameterL
     populatePage(true, nextUrl, parameterList, parameterSearch);
 };
 
-/*export const checkPreviousUrl = (): boolean => {
-    let result = false;
-
-    const state = window.history.state as IwindowHistory;
-
-    result = routerList.includes(state.previousUrl);
-
-    writeLog("JsMvcFwRouter.ts", "checkPreviousUrl", { result });
-
-    return result;
-};*/
-
 const populatePage = (isHistoryPushEnabled: boolean, nextUrl: string, parameterList?: Record<string, unknown>, parameterSearch?: string) => {
     let isNotFound = false;
 
     if (elementRoot) {
         for (const [key, value] of routerList.entries()) {
             if (value.path === nextUrl) {
-                if (isHistoryPushEnabled && publicPath) {
-                    const publicPathReplace = publicPath.replace(/\/+$/, "");
-                    const newUrl = publicPathReplace + nextUrl;
+                if (isHistoryPushEnabled && urlRoot) {
+                    const urlRootReplace = urlRoot.replace(/\/+$/, "");
 
-                    window.history.pushState({ previousUrl: window.location.pathname, parameterList }, "", newUrl);
+                    routerHistoryPush(`${urlRootReplace}${nextUrl}`, parameterList);
 
                     if (parameterSearch) {
                         window.location.search = parameterSearch;
@@ -108,7 +89,7 @@ const populatePage = (isHistoryPushEnabled: boolean, nextUrl: string, parameterL
         }
 
         if (isNotFound) {
-            window.history.pushState({ previousUrl: window.location.pathname, parameterList }, "", "/404");
+            routerHistoryPush("/404", parameterList);
 
             document.title = "404";
 
@@ -116,5 +97,26 @@ const populatePage = (isHistoryPushEnabled: boolean, nextUrl: string, parameterL
         }
     } else {
         throw new Error("#jsmvcfw_app not found!");
+    }
+};
+
+const routerHistoryPush = (nextUrl: string, paramterListValue?: Record<string, unknown>, title = "", soft = false): void => {
+    let url = nextUrl;
+
+    if (nextUrl.charAt(0) === "/") {
+        url = nextUrl.slice(1);
+    }
+
+    window.history.pushState(
+        {
+            previousUrl: window.location.pathname,
+            parameterList: paramterListValue
+        },
+        title,
+        url
+    );
+
+    if (!soft) {
+        window.location.href = url;
     }
 };
