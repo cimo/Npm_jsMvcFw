@@ -1,6 +1,7 @@
 # JsMvcFw
 
-Mvc javascript framework.
+Mvc javascript framework. Light, fast and secure.
+Writed with native Typescript code and no dependencies are used.
 
 ## Pack
 
