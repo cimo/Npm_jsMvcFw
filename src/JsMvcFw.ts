@@ -11,7 +11,7 @@ export const mainInit = (isDebugValue = false, urlRootValue = "/", labelValue = 
     urlRoot = urlRootValue;
     systemLabel = labelValue;
 
-    writeLog("JsMvcFw.ts - mainInit", { isDebug, urlRoot, labelValue });
+    writeLog("@cimo/jsmvcfw => JsMvcFw.ts => mainInit()", { isDebug, urlRoot, labelValue });
 };
 
 export const variableState = <T>(name: string, value: T): IvariableState<T> => {
@@ -28,7 +28,7 @@ export const variableState = <T>(name: string, value: T): IvariableState<T> => {
         set state(newValue: T) {
             currentValue = newValue;
 
-            writeLog("JsMvcFw.ts - variableState - set state", { name, currentValue });
+            writeLog("@cimo/jsmvcfw => JsMvcFw.ts => variableState => set()", { name, currentValue });
 
             document.dispatchEvent(eventPrivate);
         },
@@ -37,7 +37,7 @@ export const variableState = <T>(name: string, value: T): IvariableState<T> => {
         },
         listener: (callback: (callbackValue: T) => void) => {
             document.addEventListener(name, () => {
-                writeLog("JsMvcFw.ts - variableState - listener", { name, currentValue });
+                writeLog("@cimo/jsmvcfw => JsMvcFw.ts => variableState => listener()", { name, currentValue });
 
                 if (callback) {
                     callback(currentValue);
@@ -50,13 +50,13 @@ export const variableState = <T>(name: string, value: T): IvariableState<T> => {
 export const writeLog = (tag: string, value: string | Record<string, unknown> | Error): void => {
     if (isDebug) {
         // eslint-disable-next-line no-console
-        console.log(`WriteLog => ${tag}: `, value);
+        console.log(`${tag} `, value);
     }
 };
 
 export const checkEnv = (key: string, value: string | undefined): string => {
     if (typeof process !== "undefined" && value === undefined) {
-        writeLog("JsMvcFw.ts - checkEnv", `${key} is not defined!`);
+        writeLog("@cimo/jsmvcfw => JsMvcFw.ts => checkEnv()", `${key} is not defined!`);
     }
 
     return value ? value : "";

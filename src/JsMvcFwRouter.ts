@@ -4,26 +4,26 @@ import { updateDataBind } from "./JsMvcFwDom";
 
 let elementRoot: Element | null = null;
 let routerList: Irouter[] = [];
-const controllerList: Icontroller[] = [];
+export const controllerList: Icontroller[] = [];
 const variableList: Record<string, IvariableState<unknown>>[] = [];
 
 export const routerInit = (routerListValue: Irouter[]) => {
     elementRoot = document.querySelector("#jsmvcfw_app");
     routerList = routerListValue;
 
-    writeLog("JsMvcFwRouter.ts - routerInit", { routerList });
-
     window.onload = (event: Event) => {
-        writeLog("JsMvcFwRouter.ts - onload", window.location.pathname);
+        writeLog("@cimo/jsmvcfw => JsMvcFwRouter.ts => onload()", window.location.pathname);
 
         if (event) {
+            writeLog("@cimo/jsmvcfw => JsMvcFwRouter.ts => routerInit()", { routerList });
+
             for (const [key, value] of routerList.entries()) {
                 controllerList.push(value.controller());
                 variableList.push(controllerList[key].variable());
 
                 for (const name of Object.keys(variableList[key])) {
                     document.addEventListener(name, () => {
-                        updateDataBind(variableList[key], name);
+                        updateDataBind(controllerList[key].view(variableList[key]), variableList[key], name);
                     });
                 }
             }
@@ -33,7 +33,7 @@ export const routerInit = (routerListValue: Irouter[]) => {
     };
 
     window.onpopstate = (event: PopStateEvent) => {
-        writeLog("JsMvcFwRouter.ts - onpopstate", window.location.pathname);
+        writeLog("@cimo/jsmvcfw => JsMvcFwRouter.ts => onpopstate()", window.location.pathname);
 
         if (event) {
             populatePage(false, window.location.pathname, false);
@@ -41,7 +41,7 @@ export const routerInit = (routerListValue: Irouter[]) => {
     };
 
     window.onbeforeunload = (event: Event) => {
-        writeLog("JsMvcFwRouter.ts - onbeforeunload", { event });
+        writeLog("@cimo/jsmvcfw => JsMvcFwRouter.ts => onbeforeunload()", { event });
 
         if (event) {
             for (const [key, value] of controllerList.entries()) {
@@ -52,7 +52,7 @@ export const routerInit = (routerListValue: Irouter[]) => {
 };
 
 export const navigateTo = (nextUrl: string, soft = false, parameterList?: Record<string, unknown>, parameterSearch?: string) => {
-    writeLog("JsMvcFwRouter.ts - navigateTo", { nextUrl, parameterList, parameterSearch });
+    writeLog("@cimo/jsmvcfw => JsMvcFwRouter.ts => navigateTo()", { nextUrl, parameterList, parameterSearch });
 
     populatePage(true, nextUrl, soft, parameterList, parameterSearch);
 };
@@ -107,7 +107,7 @@ const populatePage = (
             }
         }
     } else {
-        throw new Error("#jsmvcfw_app not found!");
+        throw new Error("@cimo/jsmvcfw => JsMvcFwRouter.ts => #jsmvcfw_app not found!");
     }
 };
 
