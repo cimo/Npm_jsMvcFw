@@ -4,8 +4,8 @@ import { updateDataBind } from "./JsMvcFwDom";
 
 let elementRoot: Element | null = null;
 let routerList: Irouter[] = [];
-export const controllerList: Icontroller[] = [];
-const variableList: Record<string, IvariableState<unknown>>[] = [];
+let controller: Icontroller | null;
+let variableMethod: Record<string, IvariableState<unknown>> | null = null;
 
 export const routerInit = (routerListValue: Irouter[]) => {
     elementRoot = document.querySelector("#jsmvcfw_app");
@@ -15,19 +15,6 @@ export const routerInit = (routerListValue: Irouter[]) => {
         writeLog("@cimo/jsmvcfw => JsMvcFwRouter.ts => onload()", window.location.pathname);
 
         if (event) {
-            writeLog("@cimo/jsmvcfw => JsMvcFwRouter.ts => routerInit()", { routerList });
-
-            for (const [key, value] of routerList.entries()) {
-                controllerList.push(value.controller());
-                variableList.push(controllerList[key].variable());
-
-                for (const name of Object.keys(variableList[key])) {
-                    document.addEventListener(name, () => {
-                        updateDataBind(controllerList[key].view(variableList[key]), variableList[key], name);
-                    });
-                }
-            }
-
             populatePage(false, window.location.pathname, false);
         }
     };
@@ -43,10 +30,8 @@ export const routerInit = (routerListValue: Irouter[]) => {
     window.onbeforeunload = (event: Event) => {
         writeLog("@cimo/jsmvcfw => JsMvcFwRouter.ts => onbeforeunload()", { event });
 
-        if (event) {
-            for (const [key, value] of controllerList.entries()) {
-                value.destroy(variableList[key]);
-            }
+        if (event && controller && Object.keys(controller).length > 0 && variableMethod) {
+            controller.destroy(variableMethod);
         }
     };
 };
@@ -67,8 +52,14 @@ const populatePage = (
     let isNotFound = false;
 
     if (elementRoot) {
-        for (const [key, value] of routerList.entries()) {
+        for (const [, value] of routerList.entries()) {
             if (value.path === nextUrl) {
+                controller = value.controller();
+
+                if (Object.keys(controller).length > 0) {
+                    variableMethod = controller.variable();
+                }
+
                 if (urlRoot && isHistoryPushEnabled) {
                     const urlRootReplace = urlRoot.replace(/\/+$/, "");
 
@@ -82,10 +73,23 @@ const populatePage = (
                 if (!isHistoryPushEnabled || soft) {
                     document.title = value.title;
 
-                    elementRoot.innerHTML = controllerList[key].view(variableList[key]);
+                    if (controller && Object.keys(controller).length > 0 && variableMethod) {
+                        for (const name of Object.keys(variableMethod)) {
+                            document.addEventListener(name, () => {
+                                if (controller && Object.keys(controller).length > 0 && variableMethod) {
+                                    updateDataBind(controller.view(variableMethod), variableMethod, name);
+                                }
+                            });
+                        }
+                        elementRoot.innerHTML = controller.view(variableMethod);
+                    } else {
+                        elementRoot.innerHTML = "";
+                    }
                 }
 
-                controllerList[key].event(variableList[key]);
+                if (controller && Object.keys(controller).length > 0 && variableMethod) {
+                    controller.event(variableMethod);
+                }
 
                 isNotFound = false;
 
