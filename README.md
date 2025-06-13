@@ -1,4 +1,4 @@
-# JsMvcFw
+# Npm_jsMvcFw
 
 Npm package, javascript mvc framework. Light, fast and secure.
 Writed with native Typescript code and no dependencies are used.
