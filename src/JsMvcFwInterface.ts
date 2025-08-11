@@ -1,6 +1,32 @@
-export interface IvariableState<T> {
+export interface IvirtualNode {
+    tag: string;
+    propertyObject: { [key: string]: TvirtualNodeProperty };
+    childrenList: Array<IvirtualNode | string>;
+    key?: string;
+}
+
+export interface IvariableBind<T> {
     state: T;
-    listener: (callback: (value: T) => void) => void;
+    listener(callback: (value: T) => void): void;
+}
+
+export interface IvariableHook<T> {
+    state: T;
+    setState: (value: T) => void;
+}
+
+export interface IvariableEffect {
+    (groupObject: { list: string[]; action: () => void }[]): void;
+}
+
+export interface Icontroller {
+    variable(): void;
+    variableEffect(watch: IvariableEffect): void;
+    view(): IvirtualNode;
+    event(): void;
+    subControllerList(): Icontroller[];
+    rendered(): void;
+    destroy(): void;
 }
 
 export interface Irouter {
@@ -9,13 +35,6 @@ export interface Irouter {
     controller(): Icontroller;
 }
 
-export interface Icontroller<T = Record<string, IvariableState<unknown>>> {
-    variable: () => T;
-    view: (variableList: T) => string;
-    event: (variableList: T) => void;
-    destroy: (variableList: T) => void;
-}
+export type TvirtualNodeProperty = string | number | boolean | (string | IvirtualNode)[] | ((event: Event) => void) | null | undefined;
 
-export interface Iview {
-    template: string;
-}
+export type TvirtualNodeChildren = IvirtualNode | string | number;

@@ -1,137 +1,347 @@
-import { IvariableState } from "./JsMvcFwInterface";
+// Source
+import { IvirtualNode, IvariableBind, IvariableHook, IvariableEffect, Icontroller } from "./JsMvcFwInterface";
+import { createVirtualNode, updateVirtualNode } from "./JsMvcFwDom";
+import Emitter from "./JsMvcFwEmitter";
 
-let isDebug = false;
-const variableStateEventList = new Set<string>();
-
-export let urlRoot = "";
-export let systemLabel = "";
-
-export const mainInit = (isDebugValue = false, urlRootValue = "/", labelValue = "") => {
-    isDebug = isDebugValue;
-    urlRoot = urlRootValue;
-    systemLabel = labelValue;
-
-    writeLog("@cimo/jsmvcfw => JsMvcFw.ts => mainInit()", { isDebug, urlRoot, labelValue });
+type Temitter = {
+    variableChanged: void;
 };
 
-export const variableState = <T>(name: string, value: T): IvariableState<T> => {
-    if (variableStateEventList.has(name)) {
-        throw new Error(`JsMvcFw.ts - variableState: Event "${name}" already exists!`);
+let isDebug = false;
+let elementRoot: HTMLElement | null = null;
+let urlRoot = "";
+
+const virtualNodeObject: Record<string, IvirtualNode> = {};
+const renderTriggerObject: Record<string, () => void> = {};
+const variableLoadedList: Record<string, string[]> = {};
+const variableEditedList: Record<string, string[]> = {};
+const variableRenderUpdateObject: Record<string, boolean> = {};
+const variableHookObject: Record<string, unknown> = {};
+const controllerList: Array<{ parent: Icontroller; childrenList: Icontroller[] }> = [];
+const cacheVariableProxyWeakMap = new WeakMap<object, unknown>();
+const emitterObject: { [controllerName: string]: Emitter<Temitter> } = {};
+
+const variableRenderUpdate = (controllerName: string): void => {
+    if (!variableRenderUpdateObject[controllerName]) {
+        variableRenderUpdateObject[controllerName] = true;
+
+        Promise.resolve().then(() => {
+            const renderTrigger = renderTriggerObject[controllerName];
+
+            if (renderTrigger) {
+                renderTrigger();
+            }
+
+            emitterObject[controllerName].emit("variableChanged");
+
+            variableRenderUpdateObject[controllerName] = false;
+        });
+    }
+};
+
+const variableProxy = <T>(stateLabel: string, stateValue: T, controllerName: string): T => {
+    if (typeof stateValue !== "object" || stateValue === null) {
+        return stateValue;
     }
 
-    let currentValue: T = value;
-    const eventPrivate = new Event(name);
+    const cache = cacheVariableProxyWeakMap.get(stateValue as object);
 
-    variableStateEventList.add(name);
+    if (cache) {
+        return cache as T;
+    }
+
+    const proxy = new Proxy(stateValue as object, {
+        get(target, property, receiver) {
+            const result = Reflect.get(target, property, receiver);
+
+            if (typeof result === "object" && result !== null) {
+                return variableProxy(stateLabel, result, controllerName);
+            }
+
+            return result;
+        },
+        set(target, property, newValue, receiver) {
+            if (!variableEditedList[controllerName].includes(stateLabel)) {
+                variableEditedList[controllerName].push(stateLabel);
+            }
+
+            const isSuccess = Reflect.set(target, property, newValue, receiver);
+
+            if (isSuccess) {
+                variableRenderUpdate(controllerName);
+            }
+
+            return isSuccess;
+        },
+        deleteProperty(target, property) {
+            if (!variableEditedList[controllerName].includes(stateLabel)) {
+                variableEditedList[controllerName].push(stateLabel);
+            }
+
+            const isSuccess = Reflect.deleteProperty(target, property);
+
+            if (isSuccess) {
+                variableRenderUpdate(controllerName);
+            }
+
+            return isSuccess;
+        }
+    });
+
+    cacheVariableProxyWeakMap.set(stateValue as object, proxy);
+
+    return proxy as T;
+};
+
+const variableBindItem = <T>(label: string, stateValue: T, controllerName: string): IvariableBind<T> => {
+    let _state = variableProxy(label, stateValue, controllerName);
+    let _listener: ((value: T) => void) | null = null;
 
     return {
-        set state(newValue: T) {
-            currentValue = newValue;
-
-            writeLog("@cimo/jsmvcfw => JsMvcFw.ts => variableState => set()", { name, currentValue });
-
-            document.dispatchEvent(eventPrivate);
-        },
         get state(): T {
-            return currentValue;
+            return _state;
         },
-        listener: (callback: (callbackValue: T) => void) => {
-            document.addEventListener(name, () => {
-                writeLog("@cimo/jsmvcfw => JsMvcFw.ts => variableState => listener()", { name, currentValue });
+        set state(value: T) {
+            if (!variableEditedList[controllerName].includes(label)) {
+                variableEditedList[controllerName].push(label);
+            }
 
-                if (callback) {
-                    callback(currentValue);
-                }
-            });
+            _state = variableProxy(label, value, controllerName);
+
+            if (_listener) {
+                _listener(_state);
+            }
+
+            variableRenderUpdate(controllerName);
+        },
+        listener(callback: (value: T) => void): void {
+            _listener = callback;
         }
     };
 };
 
-export const writeLog = (tag: string, value: string | Record<string, unknown> | Error): void => {
-    if (isDebug) {
-        // eslint-disable-next-line no-console
-        console.log(`${tag} `, value);
-    }
-};
-
-export const checkEnv = (key: string, value: string | undefined): string => {
-    if (typeof process !== "undefined" && value === undefined) {
-        writeLog("@cimo/jsmvcfw => JsMvcFw.ts => checkEnv()", `${key} is not defined!`);
+const variableWatch = (controllerName: string, callback: (watch: IvariableEffect) => void): void => {
+    if (!emitterObject[controllerName]) {
+        emitterObject[controllerName] = new Emitter<Temitter>();
     }
 
-    return value ? value : "";
+    const emitter = emitterObject[controllerName];
+
+    emitter.on("variableChanged", () => {
+        const editedList = variableEditedList[controllerName] || [];
+
+        callback((groupObject) => {
+            for (const group of groupObject) {
+                let isAllEdited = true;
+
+                for (let b = 0; b < group.list.length; b++) {
+                    const key = group.list[b];
+
+                    if (editedList.indexOf(key) === -1) {
+                        isAllEdited = false;
+
+                        break;
+                    }
+                }
+
+                if (isAllEdited) {
+                    group.action();
+
+                    for (const key of group.list) {
+                        const index = editedList.indexOf(key);
+
+                        if (index !== -1) {
+                            editedList.splice(index, 1);
+                        }
+                    }
+                }
+            }
+
+            variableEditedList[controllerName] = editedList;
+        });
+    });
 };
 
-export const writeCookie = <T>(tag: string, value: T, expire = "", httpOnly = "", path = "/"): void => {
-    const encodedData = window.btoa(encodeURIComponent(JSON.stringify(value)));
+export const getIsDebug = () => isDebug;
+export const getElementRoot = () => elementRoot;
+export const getUrlRoot = () => urlRoot;
+export const getControllerList = () => controllerList;
 
-    document.cookie = `${systemLabel}_${tag}=${encodedData};expires=${expire};${httpOnly};path=${path};Secure`;
+export const frameworkInit = (isDebugValue: boolean, elementRootId: string, urlRootValue: string): void => {
+    isDebug = isDebugValue;
+    elementRoot = document.getElementById(elementRootId);
+    urlRoot = urlRootValue;
 };
 
-export const readCookie = <T>(tag: string): T | undefined => {
-    let result: T | undefined;
+export const renderTemplate = (controllerValue: Icontroller, controllerParent?: Icontroller, callback?: () => void): void => {
+    const controllerName = controllerValue.constructor.name;
 
-    const name = escapeRegExp(`${systemLabel}_${tag}`);
-    const resultMatch = document.cookie.match(new RegExp(`${name}=([^;]+)`));
+    if (!controllerParent) {
+        controllerList.push({ parent: controllerValue, childrenList: [] });
+    } else {
+        for (const controller of controllerList) {
+            if (controllerParent.constructor.name === controller.parent.constructor.name) {
+                controller.childrenList.push(controllerValue);
 
-    if (resultMatch) {
-        let cookie = resultMatch[1];
+                break;
+            }
+        }
+    }
 
-        if (isBase64(cookie.replaceAll('"', ""))) {
-            cookie = window.atob(cookie.replaceAll('"', ""));
+    controllerValue.variable();
+
+    const renderTrigger = () => {
+        const virtualNodeNew = controllerValue.view();
+
+        if (!virtualNodeNew || typeof virtualNodeNew !== "object" || !virtualNodeNew.tag) {
+            throw new Error(`JsMvcFw.ts => Invalid virtual node returned by controller "${controllerName}".`);
         }
 
-        const decodeUriCookie = decodeURIComponent(cookie);
+        let elementContainer: Element | null = null;
 
-        if (isJson(decodeUriCookie)) {
-            result = JSON.parse(decodeUriCookie) as T;
+        if (!controllerParent) {
+            if (!elementRoot) {
+                throw new Error("JsMvcFw.ts => Root element #jsmvcfw_app not found.");
+            }
+
+            elementContainer = elementRoot;
         } else {
-            result = decodeUriCookie as T;
+            const parentContainer = document.querySelector(`[data-jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
+
+            if (!parentContainer) {
+                throw new Error(`JsMvcFw.ts => Tag data-jsmvcfw-controllerName="${controllerParent.constructor.name}" not found.`);
+            }
+
+            elementContainer = parentContainer.querySelector(`[data-jsmvcfw-controllerName="${controllerName}"]`);
+
+            if (!elementContainer) {
+                throw new Error(
+                    `JsMvcFw.ts => Tag data-jsmvcfw-controllerName="${controllerName}" not found inside data-jsmvcfw-controllerName="${controllerParent.constructor.name}".`
+                );
+            }
+        }
+
+        const virtualNodeOld = virtualNodeObject[controllerName];
+
+        if (!virtualNodeOld) {
+            if (elementContainer) {
+                const elementVirtualNode = createVirtualNode(virtualNodeNew);
+
+                elementContainer.innerHTML = "";
+
+                elementContainer.appendChild(elementVirtualNode);
+
+                if (callback) {
+                    callback();
+                }
+            }
+        } else {
+            if (elementContainer) {
+                const elementFirstChild = elementContainer.firstElementChild;
+
+                if (elementFirstChild) {
+                    updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
+                }
+            }
+        }
+
+        virtualNodeObject[controllerName] = virtualNodeNew;
+    };
+
+    renderTriggerObject[controllerName] = renderTrigger;
+
+    renderTrigger();
+
+    if (controllerValue.subControllerList) {
+        const subControllerList = controllerValue.subControllerList();
+
+        for (const subController of subControllerList) {
+            renderTemplate(subController, controllerValue, () => {
+                subController.event();
+
+                renderAfter(subController).then(() => {
+                    subController.rendered();
+                });
+            });
+        }
+    }
+
+    variableWatch(controllerName, (watch) => {
+        controllerValue.variableEffect.call(controllerValue, watch);
+    });
+};
+
+export const renderAfter = (controller: Icontroller): Promise<void> => {
+    return new Promise((resolve) => {
+        const check = () => {
+            const controllerName = controller.constructor.name;
+
+            const variableLoadedLength = variableLoadedList[controllerName].length;
+            const isRendering = variableRenderUpdateObject[controllerName];
+
+            if (variableLoadedLength > 0 && !isRendering) {
+                resolve();
+            } else {
+                Promise.resolve().then(check);
+            }
+        };
+
+        check();
+    });
+};
+
+export const variableHook = <T>(label: string, stateValue: T, controllerName: string): IvariableHook<T> => {
+    if (!(controllerName in variableHookObject)) {
+        if (!variableLoadedList[controllerName]) {
+            variableLoadedList[controllerName] = [];
+            variableEditedList[controllerName] = [];
+        }
+
+        if (variableLoadedList[controllerName].includes(label)) {
+            throw new Error(`JsMvcFw.ts => The method variableHook use existing label "${label}".`);
+        }
+
+        variableLoadedList[controllerName].push(label);
+
+        variableHookObject[controllerName] = variableProxy(label, stateValue, controllerName);
+    }
+
+    return {
+        state: variableHookObject[controllerName] as T,
+        setState: (value: T) => {
+            if (!variableEditedList[controllerName].includes(label)) {
+                variableEditedList[controllerName].push(label);
+            }
+
+            variableHookObject[controllerName] = variableProxy(label, value, controllerName);
+
+            variableRenderUpdate(controllerName);
+        }
+    };
+};
+
+export const variableBind = <T extends Record<string, unknown>>(
+    variableObject: T,
+    controllerName: string
+): { [A in keyof T]: IvariableBind<T[A]> } => {
+    const result = {} as { [A in keyof T]: IvariableBind<T[A]> };
+
+    if (!variableLoadedList[controllerName]) {
+        variableLoadedList[controllerName] = [];
+        variableEditedList[controllerName] = [];
+    }
+
+    for (const key in variableObject) {
+        if (Object.prototype.hasOwnProperty.call(variableObject, key)) {
+            if (variableLoadedList[controllerName].includes(key)) {
+                throw new Error(`JsMvcFw.ts => The method variableBind use existing label "${key}".`);
+            }
+
+            variableLoadedList[controllerName].push(key);
+
+            result[key] = variableBindItem(key, variableObject[key] as T[typeof key], controllerName);
         }
     }
 
     return result;
-};
-
-export const removeCookie = (tag: string): void => {
-    document.cookie = `${systemLabel}_${tag}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
-};
-
-export const writeStorage = <T>(tag: string, value: T): void => {
-    const encodedData = window.btoa(encodeURIComponent(JSON.stringify(value)));
-
-    localStorage.setItem(`${systemLabel}_${tag}`, encodedData);
-};
-
-export const readStorage = <T>(tag: string): T | undefined => {
-    let result: T | undefined;
-
-    const storage = localStorage.getItem(`${systemLabel}_${tag}`);
-
-    if (storage) {
-        result = JSON.parse(decodeURIComponent(window.atob(storage))) as T;
-    }
-
-    return result;
-};
-
-export const removeStorage = (tag: string): void => {
-    localStorage.removeItem(`${systemLabel}_${tag}`);
-};
-
-export const isJson = (value: string): boolean => {
-    return /^[\],:{}\s]*$/.test(
-        value
-            .replace(/\\["\\/bfnrtu]/g, "@")
-            .replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+-]?\d+)?/g, "]")
-            .replace(/(?:^|:|,)(?:\s*\[)+/g, "")
-    );
-};
-
-export const isBase64 = (value: string): boolean => {
-    return /^[A-Za-z0-9+/]*={0,2}$/.test(value) && value.length % 4 === 0;
-};
-
-export const escapeRegExp = (value: string): string => {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 };
