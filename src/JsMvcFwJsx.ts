@@ -10,7 +10,7 @@ const stackErrorDetail = (): string => {
 
     const stackSplit = stack.split("\n");
 
-    const callerLine = stackSplit[2].trim() ?? "unknown";
+    const callerLine = stackSplit[2].trim() || "unknown";
 
     return callerLine.charAt(0).toUpperCase() + callerLine.slice(1).toLowerCase();
 };
@@ -56,13 +56,15 @@ const checkDynamicElement = (childrenListValue: TvirtualNodeChildren[]): void =>
             const isAllFromArray = group.every(({ isFromArray }) => isFromArray);
 
             if (group.length > 1 && keyMissingList.length > 0 && isAllFromArray) {
-                throw new Error(`JsMvcFwJsx.ts => ${errorDetail}, multiple <${tag}> elements missing key tag.`);
+                throw new Error(
+                    `@cimo/jsmvcfw - JsMvcFwJsx.ts - checkDynamicElement() => ${errorDetail}, multiple <${tag}> elements missing key tag!`
+                );
             }
         }
     }
 };
 
-const jsxFactory = (
+export const jsxFactory = (
     tag: string,
     propertyObjectValue: IvirtualNode["propertyObject"] = {},
     ...childrenListValue: TvirtualNodeChildren[]
@@ -93,7 +95,7 @@ const jsxFactory = (
 
     checkDynamicElement(childrenListValue);
 
-    const { key, ...propertyObject } = propertyObjectValue ?? {};
+    const { key, ...propertyObject } = propertyObjectValue || {};
 
     return {
         tag,
@@ -102,5 +104,3 @@ const jsxFactory = (
         key: key !== undefined ? String(key) : undefined
     };
 };
-
-export default jsxFactory;

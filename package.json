@@ -1,12 +1,12 @@
 {
     "name": "@cimo/jsmvcfw",
-    "version": "1.1.9",
+    "version": "1.1.11",
     "description": "Javascript mvc framework. Light, fast and secure.",
     "author": "cimo",
     "license": "MIT",
     "repository": {
         "type": "git",
-        "url": "https://github.com/cimo/Npm_jsMvcFw.git"
+        "url": "git+https://github.com/cimo/Npm_jsMvcFw.git"
     },
     "scripts": {
         "remove_dist": "node -e \"const fs = require('fs'); try{ fs.rmdirSync('./dist/', { recursive: true }) } catch{}; process.exit(0);\"",

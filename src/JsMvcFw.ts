@@ -194,14 +194,14 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
         const virtualNodeNew = controllerValue.view();
 
         if (!virtualNodeNew || typeof virtualNodeNew !== "object" || !virtualNodeNew.tag) {
-            throw new Error(`JsMvcFw.ts => Invalid virtual node returned by controller "${controllerName}".`);
+            throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Invalid virtual node returned by controller "${controllerName}"!`);
         }
 
         let elementContainer: Element | null = null;
 
         if (!controllerParent) {
             if (!elementRoot) {
-                throw new Error("JsMvcFw.ts => Root element #jsmvcfw_app not found.");
+                throw new Error("@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Root element #jsmvcfw_app not found!");
             }
 
             elementContainer = elementRoot;
@@ -209,14 +209,16 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
             const parentContainer = document.querySelector(`[data-jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
 
             if (!parentContainer) {
-                throw new Error(`JsMvcFw.ts => Tag data-jsmvcfw-controllerName="${controllerParent.constructor.name}" not found.`);
+                throw new Error(
+                    `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag data-jsmvcfw-controllerName="${controllerParent.constructor.name}" not found!`
+                );
             }
 
             elementContainer = parentContainer.querySelector(`[data-jsmvcfw-controllerName="${controllerName}"]`);
 
             if (!elementContainer) {
                 throw new Error(
-                    `JsMvcFw.ts => Tag data-jsmvcfw-controllerName="${controllerName}" not found inside data-jsmvcfw-controllerName="${controllerParent.constructor.name}".`
+                    `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag data-jsmvcfw-controllerName="${controllerName}" not found inside data-jsmvcfw-controllerName="${controllerParent.constructor.name}"!`
                 );
             }
         }
@@ -298,7 +300,7 @@ export const variableHook = <T>(label: string, stateValue: T, controllerName: st
         }
 
         if (variableLoadedList[controllerName].includes(label)) {
-            throw new Error(`JsMvcFw.ts => The method variableHook use existing label "${label}".`);
+            throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableHook() => The method variableHook use existing label "${label}"!`);
         }
 
         variableLoadedList[controllerName].push(label);
@@ -334,7 +336,7 @@ export const variableBind = <T extends Record<string, unknown>>(
     for (const key in variableObject) {
         if (Object.prototype.hasOwnProperty.call(variableObject, key)) {
             if (variableLoadedList[controllerName].includes(key)) {
-                throw new Error(`JsMvcFw.ts => The method variableBind use existing label "${key}".`);
+                throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableBind() => The method variableBind use existing label "${key}"!`);
             }
 
             variableLoadedList[controllerName].push(key);

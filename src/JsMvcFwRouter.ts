@@ -67,7 +67,7 @@ const populatePage = (
     const elementRoot = getElementRoot();
 
     if (!elementRoot) {
-        throw new Error("JsMvcFwRouter.ts => Element root not found!");
+        throw new Error("@cimo/jsmvcfw - JsMvcFwRouter.ts - populatePage() => Element root not found!");
     }
 
     for (const route of routerList) {
