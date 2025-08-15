@@ -1,5 +1,5 @@
 // Source
-import { IvirtualNode, IvariableBind, IvariableHook, IvariableEffect, Icontroller } from "./JsMvcFwInterface";
+import { IvirtualNode, IvariableBind, IvariableHook, IvariableEffect, Icontroller, IcallbackObserver } from "./JsMvcFwInterface";
 import { createVirtualNode, updateVirtualNode } from "./JsMvcFwDom";
 import Emitter from "./JsMvcFwEmitter";
 
@@ -20,6 +20,8 @@ const variableHookObject: Record<string, unknown> = {};
 const controllerList: Array<{ parent: Icontroller; childrenList: Icontroller[] }> = [];
 const cacheVariableProxyWeakMap = new WeakMap<object, unknown>();
 const emitterObject: { [controllerName: string]: Emitter<Temitter> } = {};
+const observerWeakMap: WeakMap<HTMLElement, MutationObserver> = new WeakMap();
+const callbackObserverWeakMap: WeakMap<HTMLElement, IcallbackObserver[]> = new WeakMap();
 
 const variableRenderUpdate = (controllerName: string): void => {
     if (!variableRenderUpdateObject[controllerName]) {
@@ -346,4 +348,53 @@ export const variableBind = <T extends Record<string, unknown>>(
     }
 
     return result;
+};
+
+export const elementObserver = (element: HTMLElement, callback: IcallbackObserver): void => {
+    const callbackList = callbackObserverWeakMap.get(element) || [];
+    callbackObserverWeakMap.set(element, [...callbackList, callback]);
+
+    if (!observerWeakMap.has(element)) {
+        const observer = new MutationObserver((mutationRecordList) => {
+            const callbackList = callbackObserverWeakMap.get(element);
+
+            if (!callbackList) {
+                return;
+            }
+
+            for (const mutationRecord of mutationRecordList) {
+                for (const callback of callbackList) {
+                    callback(element, mutationRecord);
+                }
+            }
+        });
+
+        observer.observe(element, {
+            subtree: true,
+            childList: true,
+            attributes: true
+        });
+
+        observerWeakMap.set(element, observer);
+    }
+};
+
+export const elementObserverOff = (element: HTMLElement): void => {
+    const observer = observerWeakMap.get(element);
+
+    if (observer) {
+        observer.disconnect();
+    }
+};
+
+export const elementObserverOn = (element: HTMLElement): void => {
+    const observer = observerWeakMap.get(element);
+
+    if (observer) {
+        observer.observe(element, {
+            subtree: true,
+            childList: true,
+            attributes: true
+        });
+    }
 };

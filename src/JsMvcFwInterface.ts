@@ -35,6 +35,10 @@ export interface Irouter {
     controller(): Icontroller;
 }
 
+export interface IcallbackObserver {
+    (el: HTMLElement, mutation: MutationRecord): void;
+}
+
 export type TvirtualNodeProperty = string | number | boolean | (string | IvirtualNode)[] | ((event: Event) => void) | null | undefined;
 
 export type TvirtualNodeChildren = IvirtualNode | string | number;
