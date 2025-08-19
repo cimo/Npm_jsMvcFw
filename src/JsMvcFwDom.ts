@@ -70,7 +70,7 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
         const nodeDom = element.childNodes[a];
 
         if (!nodeNew && nodeDom) {
-            const isControllerName = nodeDom.nodeType === Node.ELEMENT_NODE && (nodeDom as Element).hasAttribute("data-jsmvcfw-controllername");
+            const isControllerName = nodeDom.nodeType === Node.ELEMENT_NODE && (nodeDom as Element).hasAttribute("jsmvcfw-controllername");
 
             if (!isControllerName) {
                 element.removeChild(nodeDom);
@@ -90,7 +90,7 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
                 element.replaceChild(document.createTextNode(nodeNew), nodeDom);
             }
         } else if (typeof nodeNew === "object") {
-            const isControllerName = nodeDom?.nodeType === Node.ELEMENT_NODE && (nodeDom as Element).hasAttribute("data-jsmvcfw-controllername");
+            const isControllerName = nodeDom?.nodeType === Node.ELEMENT_NODE && (nodeDom as Element).hasAttribute("jsmvcfw-controllername");
 
             if (isControllerName && !nodeNew.key) {
                 continue;
@@ -120,7 +120,7 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
 
     while (element.childNodes.length > nodeNewList.length) {
         const nodeExtra = element.childNodes[nodeNewList.length];
-        const isControllerName = nodeExtra.nodeType === Node.ELEMENT_NODE && (nodeExtra as Element).hasAttribute("data-jsmvcfw-controllername");
+        const isControllerName = nodeExtra.nodeType === Node.ELEMENT_NODE && (nodeExtra as Element).hasAttribute("jsmvcfw-controllername");
 
         if (!isControllerName) {
             element.removeChild(nodeExtra);

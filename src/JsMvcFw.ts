@@ -164,6 +164,21 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
     });
 };
 
+const elementHook = (elementContainer: Element, controllerValue: Icontroller): void => {
+    const elementHookList = elementContainer.querySelectorAll("[jsmvcfw-elementHook]");
+    const elementHookObject: Record<string, Element> = {};
+
+    for (const elementHook of elementHookList) {
+        const attribute = elementHook.getAttribute("jsmvcfw-elementHook");
+
+        if (attribute) {
+            elementHookObject[attribute] = elementHook;
+        }
+    }
+
+    controllerValue.elementHook = elementHookObject;
+};
+
 export const getIsDebug = () => isDebug;
 export const getElementRoot = () => elementRoot;
 export const getUrlRoot = () => urlRoot;
@@ -208,19 +223,19 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
             elementContainer = elementRoot;
         } else {
-            const parentContainer = document.querySelector(`[data-jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
+            const parentContainer = document.querySelector(`[jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
 
             if (!parentContainer) {
                 throw new Error(
-                    `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag data-jsmvcfw-controllerName="${controllerParent.constructor.name}" not found!`
+                    `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerParent.constructor.name}" not found!`
                 );
             }
 
-            elementContainer = parentContainer.querySelector(`[data-jsmvcfw-controllerName="${controllerName}"]`);
+            elementContainer = parentContainer.querySelector(`[jsmvcfw-controllerName="${controllerName}"]`);
 
             if (!elementContainer) {
                 throw new Error(
-                    `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag data-jsmvcfw-controllerName="${controllerName}" not found inside data-jsmvcfw-controllerName="${controllerParent.constructor.name}"!`
+                    `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerName}" not found inside jsmvcfw-controllerName="${controllerParent.constructor.name}"!`
                 );
             }
         }
@@ -250,6 +265,8 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
         }
 
         virtualNodeObject[controllerName] = virtualNodeNew;
+
+        elementHook(elementContainer, controllerValue);
     };
 
     renderTriggerObject[controllerName] = renderTrigger;
