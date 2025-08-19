@@ -176,7 +176,7 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
         }
     }
 
-    controllerValue.elementHook = elementHookObject;
+    controllerValue.elementHookObject = elementHookObject;
 };
 
 export const getIsDebug = () => isDebug;

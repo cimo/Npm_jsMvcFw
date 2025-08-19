@@ -20,7 +20,7 @@ export interface IvariableEffect {
 }
 
 export interface Icontroller {
-    elementHook: Record<string, Element>;
+    elementHookObject: Record<string, Element>;
     variable(): void;
     variableEffect(watch: IvariableEffect): void;
     view(): IvirtualNode;
