@@ -166,13 +166,28 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
 
 const elementHook = (elementContainer: Element, controllerValue: Icontroller): void => {
     const elementHookList = elementContainer.querySelectorAll("[jsmvcfw-elementHook]");
-    const elementHookObject: Record<string, Element> = {};
+    const elementHookObject: Record<string, Element | Element[]> = {};
 
     for (const elementHook of elementHookList) {
         const attribute = elementHook.getAttribute("jsmvcfw-elementHook");
 
         if (attribute) {
-            elementHookObject[attribute] = elementHook;
+            const matchList = attribute.match(/^([a-zA-Z0-9]+)_\d+$/);
+            const baseKey = matchList ? matchList[1] : attribute;
+
+            if (elementHookObject[baseKey]) {
+                if (Array.isArray(elementHookObject[baseKey])) {
+                    (elementHookObject[baseKey] as Element[]).push(elementHook);
+                } else {
+                    elementHookObject[baseKey] = [elementHookObject[baseKey] as Element, elementHook];
+                }
+            } else {
+                if (matchList) {
+                    elementHookObject[baseKey] = [elementHook];
+                } else {
+                    elementHookObject[attribute] = elementHook;
+                }
+            }
         }
     }
 
