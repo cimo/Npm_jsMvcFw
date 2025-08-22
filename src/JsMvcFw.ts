@@ -20,7 +20,7 @@ let observerWeakMap: WeakMap<HTMLElement, MutationObserver> = new WeakMap();
 let callbackObserverWeakMap: WeakMap<HTMLElement, IcallbackObserver[]> = new WeakMap();
 
 const variableRenderUpdate = (controllerName: string): void => {
-    if (!variableRenderUpdateObject[controllerName]) {
+    if (emitterObject[controllerName] && !variableRenderUpdateObject[controllerName]) {
         variableRenderUpdateObject[controllerName] = true;
 
         Promise.resolve().then(() => {
@@ -59,7 +59,7 @@ const variableProxy = <T>(stateLabel: string, stateValue: T, controllerName: str
             return result;
         },
         set(target, property, newValue, receiver) {
-            if (!variableEditedList[controllerName].includes(stateLabel)) {
+            if (variableEditedList[controllerName] && !variableEditedList[controllerName].includes(stateLabel)) {
                 variableEditedList[controllerName].push(stateLabel);
             }
 
@@ -72,7 +72,7 @@ const variableProxy = <T>(stateLabel: string, stateValue: T, controllerName: str
             return isSuccess;
         },
         deleteProperty(target, property) {
-            if (!variableEditedList[controllerName].includes(stateLabel)) {
+            if (variableEditedList[controllerName] && !variableEditedList[controllerName].includes(stateLabel)) {
                 variableEditedList[controllerName].push(stateLabel);
             }
 
@@ -100,7 +100,7 @@ const variableBindItem = <T>(label: string, stateValue: T, controllerName: strin
             return _state;
         },
         set state(value: T) {
-            if (!variableEditedList[controllerName].includes(label)) {
+            if (variableEditedList[controllerName] && !variableEditedList[controllerName].includes(label)) {
                 variableEditedList[controllerName].push(label);
             }
 
@@ -338,7 +338,7 @@ export const variableHook = <T>(label: string, stateValue: T, controllerName: st
     return {
         state: variableHookObject[controllerName] as T,
         setState: (value: T) => {
-            if (!variableEditedList[controllerName].includes(label)) {
+            if (variableEditedList[controllerName] && !variableEditedList[controllerName].includes(label)) {
                 variableEditedList[controllerName].push(label);
             }
 
