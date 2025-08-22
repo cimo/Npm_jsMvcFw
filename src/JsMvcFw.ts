@@ -7,10 +7,6 @@ type Temitter = {
     variableChanged: void;
 };
 
-let isDebug = false;
-let elementRoot: HTMLElement | null = null;
-let urlRoot = "";
-
 const virtualNodeObject: Record<string, IvirtualNode> = {};
 const renderTriggerObject: Record<string, () => void> = {};
 const variableLoadedList: Record<string, string[]> = {};
@@ -18,10 +14,10 @@ const variableEditedList: Record<string, string[]> = {};
 const variableRenderUpdateObject: Record<string, boolean> = {};
 const variableHookObject: Record<string, unknown> = {};
 const controllerList: Array<{ parent: Icontroller; childrenList: Icontroller[] }> = [];
-const cacheVariableProxyWeakMap = new WeakMap<object, unknown>();
+let cacheVariableProxyWeakMap = new WeakMap<object, unknown>();
 const emitterObject: { [controllerName: string]: Emitter<Temitter> } = {};
-const observerWeakMap: WeakMap<HTMLElement, MutationObserver> = new WeakMap();
-const callbackObserverWeakMap: WeakMap<HTMLElement, IcallbackObserver[]> = new WeakMap();
+let observerWeakMap: WeakMap<HTMLElement, MutationObserver> = new WeakMap();
+let callbackObserverWeakMap: WeakMap<HTMLElement, IcallbackObserver[]> = new WeakMap();
 
 const variableRenderUpdate = (controllerName: string): void => {
     if (!variableRenderUpdateObject[controllerName]) {
@@ -194,16 +190,7 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
     controllerValue.elementHookObject = elementHookObject;
 };
 
-export const getIsDebug = () => isDebug;
-export const getElementRoot = () => elementRoot;
-export const getUrlRoot = () => urlRoot;
 export const getControllerList = () => controllerList;
-
-export const frameworkInit = (isDebugValue: boolean, elementRootId: string, urlRootValue: string): void => {
-    isDebug = isDebugValue;
-    elementRoot = document.getElementById(elementRootId);
-    urlRoot = urlRootValue;
-};
 
 export const renderTemplate = (controllerValue: Icontroller, controllerParent?: Icontroller, callback?: () => void): void => {
     const controllerName = controllerValue.constructor.name;
@@ -232,6 +219,8 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
         let elementContainer: Element | null = null;
 
         if (!controllerParent) {
+            const elementRoot = document.getElementById("jsmvcfw_app");
+
             if (!elementRoot) {
                 throw new Error("@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Root element #jsmvcfw_app not found!");
             }
@@ -311,6 +300,10 @@ export const renderAfter = (controller: Icontroller): Promise<void> => {
     return new Promise((resolve) => {
         const check = () => {
             const controllerName = controller.constructor.name;
+
+            if (!variableLoadedList[controllerName]) {
+                return;
+            }
 
             const variableLoadedLength = variableLoadedList[controllerName].length;
             const isRendering = variableRenderUpdateObject[controllerName];
@@ -429,4 +422,18 @@ export const elementObserverOn = (element: HTMLElement): void => {
             attributes: true
         });
     }
+};
+
+export const resetFramework = (): void => {
+    Object.keys(virtualNodeObject).forEach((key) => delete virtualNodeObject[key]);
+    Object.keys(renderTriggerObject).forEach((key) => delete renderTriggerObject[key]);
+    Object.keys(variableLoadedList).forEach((key) => delete variableLoadedList[key]);
+    Object.keys(variableEditedList).forEach((key) => delete variableEditedList[key]);
+    Object.keys(variableRenderUpdateObject).forEach((key) => delete variableRenderUpdateObject[key]);
+    Object.keys(variableHookObject).forEach((key) => delete variableHookObject[key]);
+    controllerList.length = 0;
+    cacheVariableProxyWeakMap = new WeakMap();
+    Object.keys(emitterObject).forEach((key) => delete emitterObject[key]);
+    observerWeakMap = new WeakMap();
+    callbackObserverWeakMap = new WeakMap();
 };

@@ -30,7 +30,7 @@ export interface Icontroller {
     destroy(): void;
 }
 
-export interface Irouter {
+export interface Iroute {
     title: string;
     path: string;
     controller(): Icontroller;

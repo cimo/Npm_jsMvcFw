@@ -4,5 +4,5 @@ export * from "./JsMvcFwEmitter";
 export * from "./JsMvcFwForm";
 export * from "./JsMvcFwInterface";
 export * from "./JsMvcFwJsx";
-export * from "./JsMvcFwRouter";
+export * from "./JsMvcFwRoute";
 export * from "./JsMvcFwStorage";
