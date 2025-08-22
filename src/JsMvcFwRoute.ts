@@ -70,19 +70,19 @@ const removeController = (): void => {
 };
 
 const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record<string, unknown>, parameterSearch?: string): void => {
-    let isNotFound = true;
+    if (!isSoft) {
+        if (parameterSearch) {
+            window.location.search = parameterSearch;
+        }
 
-    for (const route of routeList) {
-        if (route.path === urlNext) {
-            isNotFound = false;
+        window.location.href = cleanUrl(urlNext);
+    } else {
+        let isNotFound = true;
 
-            if (!isSoft) {
-                if (parameterSearch) {
-                    window.location.search = parameterSearch;
-                }
+        for (const route of routeList) {
+            if (route.path === urlNext) {
+                isNotFound = false;
 
-                window.location.href = cleanUrl(urlNext);
-            } else {
                 resetFramework();
 
                 historyPush(urlNext, parameterObject, parameterSearch, route.title);
@@ -100,17 +100,12 @@ const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record
                         controller.rendered();
                     });
                 });
+
+                break;
             }
-
-            break;
         }
-    }
 
-    if (isNotFound) {
-        if (!isSoft) {
-            window.location.search = "";
-            window.location.href = cleanUrl("/404");
-        } else {
+        if (isNotFound) {
             historyPush("/404", parameterObject, parameterSearch, "404");
 
             document.title = "404";
