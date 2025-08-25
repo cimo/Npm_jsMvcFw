@@ -1,18 +1,12 @@
 // Source
-import { Iroute, Icontroller } from "./JsMvcFwInterface";
+import { Iroute, Icontroller, IhistoryPushStateData } from "./JsMvcFwInterface";
 import { getControllerList, renderTemplate, renderAfter, getUrlRoot, frameworkReset } from "./JsMvcFw";
 
 let routeList: Iroute[] = [];
 let controller: Icontroller;
 
 const cleanUrl = (urlNext: string): string => {
-    let url = urlNext;
-
-    if (urlNext !== "/" && urlNext.charAt(0) === "/") {
-        url = urlNext.slice(1);
-    }
-
-    const [path, queryString] = url.split("?");
+    const [path, queryString] = urlNext.split("?");
     const queryStringCleanedList: string[] = [];
 
     if (queryString) {
@@ -44,15 +38,13 @@ const cleanUrl = (urlNext: string): string => {
 };
 
 const historyPush = (urlNext: string, parameterObject?: Record<string, unknown>, parameterSearch?: string, title = ""): void => {
-    window.history.pushState(
-        {
-            urlPrevious: window.location.pathname,
-            parameterObject,
-            parameterSearch
-        },
-        title,
-        cleanUrl(urlNext)
-    );
+    const data: IhistoryPushStateData = {
+        urlPrevious: window.location.pathname,
+        parameterObject,
+        parameterSearch
+    };
+
+    window.history.pushState(data, title, cleanUrl(urlNext));
 };
 
 const removeController = (): void => {
@@ -70,22 +62,24 @@ const removeController = (): void => {
 };
 
 const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record<string, unknown>, parameterSearch?: string): void => {
+    const urlNextSlice = urlNext.endsWith("/") && urlNext.length > 1 ? urlNext.slice(0, -1) : urlNext;
+
     if (!isSoft) {
         if (parameterSearch) {
             window.location.search = parameterSearch;
         }
 
-        window.location.href = cleanUrl(urlNext);
+        window.location.href = cleanUrl(urlNextSlice);
     } else {
         let isNotFound = true;
 
         for (const route of routeList) {
-            if (route.path === urlNext) {
+            if (route.path === urlNextSlice) {
                 isNotFound = false;
 
                 frameworkReset();
 
-                historyPush(urlNext, parameterObject, parameterSearch, route.title);
+                historyPush(urlNextSlice, parameterObject, parameterSearch, route.title);
 
                 document.title = route.title;
 
@@ -129,7 +123,11 @@ export const route = (routeListValue: Iroute[]): void => {
     };
 
     window.onpopstate = (event: PopStateEvent) => {
-        if (event) {
+        const data = event.state as IhistoryPushStateData;
+
+        if (data.urlPrevious) {
+            populatePage(data.urlPrevious, true);
+        } else {
             populatePage(window.location.pathname, true);
         }
     };

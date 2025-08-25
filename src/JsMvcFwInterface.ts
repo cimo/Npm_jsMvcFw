@@ -36,6 +36,12 @@ export interface Iroute {
     controller(): Icontroller;
 }
 
+export interface IhistoryPushStateData {
+    urlPrevious: string;
+    parameterObject: Record<string, unknown> | undefined;
+    parameterSearch: string | undefined;
+}
+
 export interface IcallbackObserver {
     (el: HTMLElement, mutation: MutationRecord): void;
 }
