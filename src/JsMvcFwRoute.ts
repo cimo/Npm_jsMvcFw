@@ -1,6 +1,6 @@
 // Source
 import { Iroute, Icontroller } from "./JsMvcFwInterface";
-import { getControllerList, renderTemplate, renderAfter, resetFramework } from "./JsMvcFw";
+import { getControllerList, renderTemplate, renderAfter, getUrlRoot, frameworkReset } from "./JsMvcFw";
 
 let routeList: Iroute[] = [];
 let controller: Icontroller;
@@ -83,7 +83,7 @@ const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record
             if (route.path === urlNext) {
                 isNotFound = false;
 
-                resetFramework();
+                frameworkReset();
 
                 historyPush(urlNext, parameterObject, parameterSearch, route.title);
 
@@ -106,13 +106,7 @@ const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record
         }
 
         if (isNotFound) {
-            let pathname = window.location.pathname;
-
-            if (pathname.charAt(pathname.length - 1) === "/") {
-                pathname = pathname.slice(0, -1);
-            }
-
-            historyPush(`${pathname}/404`, parameterObject, parameterSearch, "404");
+            historyPush(`${getUrlRoot()}/404`, parameterObject, parameterSearch, "404");
 
             document.title = "404";
 

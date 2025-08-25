@@ -7,6 +7,7 @@ type Temitter = {
     variableChanged: void;
 };
 
+let urlRoot: string = "";
 const virtualNodeObject: Record<string, IvirtualNode> = {};
 const renderTriggerObject: Record<string, () => void> = {};
 const variableLoadedList: Record<string, string[]> = {};
@@ -189,6 +190,9 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
 
     controllerValue.elementHookObject = elementHookObject;
 };
+
+export const setUrlRoot = (urlRootValue: string) => (urlRoot = urlRootValue);
+export const getUrlRoot = () => urlRoot;
 
 export const getControllerList = () => controllerList;
 
@@ -424,7 +428,7 @@ export const elementObserverOn = (element: HTMLElement): void => {
     }
 };
 
-export const resetFramework = (): void => {
+export const frameworkReset = (): void => {
     Object.keys(virtualNodeObject).forEach((key) => delete virtualNodeObject[key]);
     Object.keys(renderTriggerObject).forEach((key) => delete renderTriggerObject[key]);
     Object.keys(variableLoadedList).forEach((key) => delete variableLoadedList[key]);
