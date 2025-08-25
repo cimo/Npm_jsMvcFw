@@ -106,7 +106,13 @@ const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record
         }
 
         if (isNotFound) {
-            historyPush("/404", parameterObject, parameterSearch, "404");
+            let pathname = window.location.pathname;
+
+            if (pathname.charAt(pathname.length - 1) === "/") {
+                pathname = pathname.slice(0, -1);
+            }
+
+            historyPush(`${pathname}/404`, parameterObject, parameterSearch, "404");
 
             document.title = "404";
 
