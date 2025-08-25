@@ -61,25 +61,31 @@ const removeController = (): void => {
     }
 };
 
+const removeTrail = (value: string): string => {
+    return value.endsWith("/") && value.length > 1 ? value.slice(0, -1) : value;
+};
+
 const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record<string, unknown>, parameterSearch?: string): void => {
-    const urlNextSlice = urlNext.endsWith("/") && urlNext.length > 1 ? urlNext.slice(0, -1) : urlNext;
+    const urlNextTrail = removeTrail(urlNext);
 
     if (!isSoft) {
         if (parameterSearch) {
             window.location.search = parameterSearch;
         }
 
-        window.location.href = cleanUrl(urlNextSlice);
+        window.location.href = cleanUrl(urlNextTrail);
     } else {
         let isNotFound = true;
 
         for (const route of routeList) {
-            if (route.path === urlNextSlice) {
+            const routePathTrail = removeTrail(route.path);
+
+            if (routePathTrail === urlNextTrail) {
                 isNotFound = false;
 
                 frameworkReset();
 
-                historyPush(urlNextSlice, parameterObject, parameterSearch, route.title);
+                historyPush(urlNextTrail, parameterObject, parameterSearch, route.title);
 
                 document.title = route.title;
 
