@@ -1,6 +1,6 @@
 // Source
 import { Iroute, Icontroller, IhistoryPushStateData } from "./JsMvcFwInterface";
-import { getControllerList, renderTemplate, renderAfter, getUrlRoot, frameworkReset } from "./JsMvcFw";
+import { getUrlRoot, getControllerList, renderTemplate, renderAfter, frameworkReset } from "./JsMvcFw";
 
 let routeList: Iroute[] = [];
 let controller: Icontroller;
@@ -66,19 +66,19 @@ const removeTrail = (value: string): string => {
 };
 
 const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record<string, unknown>, parameterSearch?: string): void => {
-    const urlNextTrail = removeTrail(urlNext);
-
     if (!isSoft) {
         if (parameterSearch) {
             window.location.search = parameterSearch;
         }
 
-        window.location.href = cleanUrl(urlNextTrail);
+        window.location.href = cleanUrl(urlNext);
     } else {
         let isNotFound = true;
 
+        const urlNextTrail = removeTrail(urlNext);
+
         for (const route of routeList) {
-            const routePathTrail = removeTrail(route.path);
+            const routePathTrail = removeTrail(`${getUrlRoot()}${route.path}`);
 
             if (routePathTrail === urlNextTrail) {
                 isNotFound = false;
