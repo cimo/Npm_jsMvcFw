@@ -1,4 +1,5 @@
 export * from "./JsMvcFw";
+export * from "./JsMvcFwCookie";
 export * from "./JsMvcFwDom";
 export * from "./JsMvcFwEmitter";
 export * from "./JsMvcFwForm";

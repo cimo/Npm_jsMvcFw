@@ -3,6 +3,12 @@
 Npm package, javascript mvc framework. Light, fast and secure.
 Writed with native Typescript code and no dependencies are used.
 
+## Info:
+
+- a
+- b
+- c
+
 ## Pack
 
 1. npm run build
