@@ -1,6 +1,6 @@
 {
     "name": "@cimo/jsmvcfw",
-    "version": "1.4.23",
+    "version": "1.4.24",
     "description": "Javascript mvc framework. Light, fast and secure.",
     "author": "cimo",
     "license": "MIT",
@@ -9,7 +9,6 @@
         "url": "git+https://github.com/cimo/Npm_jsMvcFw.git"
     },
     "scripts": {
-        "preinstall": "npx npm-force-resolutions",
         "remove_dist": "node -e \"const fs = require('fs'); try{ fs.rmdirSync('./dist/', { recursive: true }) } catch{}; process.exit(0);\"",
         "remove_build": "node -e \"const fs = require('fs'); try{ fs.rmdirSync('./build/', { recursive: true }) } catch{}; process.exit(0);\"",
         "check": "eslint --no-cache --config eslint.config.js",
@@ -28,10 +27,7 @@
         "globals": "15.13.0",
         "@types/node": "22.10.2"
     },
-    "resolutions": {
-        "js-yaml": "4.1.1",
-        "**/js-yaml": "4.1.1"
-    },
+    "resolutions": {},
     "files": [
         "./dist/"
     ],
