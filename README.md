@@ -5,9 +5,8 @@ Writed with native Typescript code and no dependencies are used.
 
 ## Info:
 
-- a
-- b
-- c
+The framework is a platform designed to simplify the development of dynamic user interfaces and modern web applications.
+It provides a clear structure and integrated tools to create reusable components, manage application state, and update the UI reactively, reducing code complexity and improving maintainability.
 
 ## Pack
 

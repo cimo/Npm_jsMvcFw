@@ -8,6 +8,7 @@ type Temitter = {
 };
 
 let urlRoot: string = "";
+let appLabel: string = "";
 const virtualNodeObject: Record<string, IvirtualNode> = {};
 const renderTriggerObject: Record<string, () => void> = {};
 const variableLoadedList: Record<string, string[]> = {};
@@ -162,11 +163,11 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
 };
 
 const elementHook = (elementContainer: Element, controllerValue: Icontroller): void => {
-    const elementHookList = elementContainer.querySelectorAll("[jsmvcfw-elementHook]");
+    const elementHookList = elementContainer.querySelectorAll("[jsmvcfw-elementHookName]");
     const elementHookObject: Record<string, Element | Element[]> = {};
 
     for (const elementHook of elementHookList) {
-        const attribute = elementHook.getAttribute("jsmvcfw-elementHook");
+        const attribute = elementHook.getAttribute("jsmvcfw-elementHookName");
 
         if (attribute) {
             const matchList = attribute.match(/^([a-zA-Z0-9]+)_\d+$/);
@@ -193,6 +194,9 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
 
 export const setUrlRoot = (urlRootValue: string) => (urlRoot = urlRootValue);
 export const getUrlRoot = () => urlRoot;
+
+export const setAppLabel = (appLabelValue: string) => (appLabel = appLabelValue);
+export const getAppLabel = () => appLabel;
 
 export const getControllerList = () => controllerList;
 
