@@ -65,10 +65,10 @@ const checkDynamicElement = (childrenListValue: TvirtualNodeChildren[]): void =>
 };
 
 export const jsxFactory = (
-    tag: string,
+    tag: string | ((props: { children: Array<IvirtualNode | string> }) => Array<IvirtualNode | string>),
     propertyObjectValue: IvirtualNode["propertyObject"] = {},
     ...childrenListValue: TvirtualNodeChildren[]
-): IvirtualNode => {
+): IvirtualNode | Array<IvirtualNode | string> => {
     const childrenList: Array<IvirtualNode | string> = [];
 
     for (let a = 0; a < childrenListValue.length; a++) {
@@ -96,6 +96,10 @@ export const jsxFactory = (
     checkDynamicElement(childrenListValue);
 
     const { key, ...propertyObject } = propertyObjectValue || {};
+
+    if (typeof tag === "function") {
+        return tag({ children: childrenList });
+    }
 
     return {
         tag,
