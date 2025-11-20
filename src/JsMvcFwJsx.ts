@@ -104,3 +104,5 @@ export const jsxFactory = (
         key: key !== undefined ? String(key) : undefined
     };
 };
+
+export const jsxFragment = ({ children }: { children: Array<IvirtualNode | string> }) => children;
