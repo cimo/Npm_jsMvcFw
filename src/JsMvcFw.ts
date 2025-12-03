@@ -164,7 +164,7 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
 
 const elementHook = (elementContainer: Element, controllerValue: Icontroller): void => {
     const elementHookList = elementContainer.querySelectorAll("[jsmvcfw-elementHookName]");
-    const elementHookObject: Record<string, Element | Element[]> = {};
+    const hookObject: Record<string, Element | Element[]> = {};
 
     for (const elementHook of elementHookList) {
         const attribute = elementHook.getAttribute("jsmvcfw-elementHookName");
@@ -173,23 +173,23 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
             const matchList = attribute.match(/^([a-zA-Z0-9]+)_\d+$/);
             const baseKey = matchList ? matchList[1] : attribute;
 
-            if (elementHookObject[baseKey]) {
-                if (Array.isArray(elementHookObject[baseKey])) {
-                    (elementHookObject[baseKey] as Element[]).push(elementHook);
+            if (hookObject[baseKey]) {
+                if (Array.isArray(hookObject[baseKey])) {
+                    (hookObject[baseKey] as Element[]).push(elementHook);
                 } else {
-                    elementHookObject[baseKey] = [elementHookObject[baseKey] as Element, elementHook];
+                    hookObject[baseKey] = [hookObject[baseKey] as Element, elementHook];
                 }
             } else {
                 if (matchList) {
-                    elementHookObject[baseKey] = [elementHook];
+                    hookObject[baseKey] = [elementHook];
                 } else {
-                    elementHookObject[attribute] = elementHook;
+                    hookObject[attribute] = elementHook;
                 }
             }
         }
     }
 
-    controllerValue.elementHookObject = elementHookObject;
+    controllerValue.hookObject = hookObject;
 };
 
 export const setUrlRoot = (urlRootValue: string) => (urlRoot = urlRootValue);
