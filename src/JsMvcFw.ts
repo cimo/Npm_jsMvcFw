@@ -1,7 +1,7 @@
 // Source
-import { IvirtualNode, IvariableBind, IvariableHook, IvariableEffect, Icontroller, IcallbackObserver } from "./JsMvcFwInterface";
-import { createVirtualNode, updateVirtualNode } from "./JsMvcFwDom";
-import Emitter from "./JsMvcFwEmitter";
+import { IvirtualNode, IvariableBind, IvariableHook, IvariableEffect, Icontroller, IcallbackObserver } from "./JsMvcFwInterface.js";
+import { createVirtualNode, updateVirtualNode } from "./JsMvcFwDom.js";
+import Emitter from "./JsMvcFwEmitter.js";
 
 type Temitter = {
     variableChanged: void;

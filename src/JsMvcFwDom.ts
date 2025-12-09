@@ -1,5 +1,5 @@
 // Source
-import { TvirtualNodeProperty, IvirtualNode } from "./JsMvcFwInterface";
+import { TvirtualNodeProperty, IvirtualNode } from "./JsMvcFwInterface.js";
 
 const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProperty, valueOld?: TvirtualNodeProperty): void => {
     if (key.startsWith("on") && typeof valueNew === "function") {

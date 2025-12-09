@@ -1,5 +1,5 @@
 // Source
-import { getAppLabel } from "./JsMvcFw";
+import { getAppLabel } from "./JsMvcFw.js";
 
 const isJson = (value: string): boolean => {
     try {

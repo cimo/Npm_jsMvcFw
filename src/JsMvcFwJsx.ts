@@ -1,5 +1,5 @@
 // Source
-import { IvirtualNode, TvirtualNodeChildren } from "./JsMvcFwInterface";
+import { IvirtualNode, TvirtualNodeChildren } from "./JsMvcFwInterface.js";
 
 const stackErrorDetail = (): string => {
     const stack = new Error().stack;

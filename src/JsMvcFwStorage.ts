@@ -1,5 +1,5 @@
 // Source
-import { getAppLabel } from "./JsMvcFw";
+import { getAppLabel } from "./JsMvcFw.js";
 
 export const writeStorage = <T>(tag: string, value: T): void => {
     const encodedData = window.btoa(encodeURIComponent(JSON.stringify(value)));

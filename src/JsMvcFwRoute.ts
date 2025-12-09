@@ -1,6 +1,6 @@
 // Source
-import { Iroute, Icontroller, IhistoryPushStateData } from "./JsMvcFwInterface";
-import { getUrlRoot, getControllerList, renderTemplate, renderAfter, frameworkReset } from "./JsMvcFw";
+import { Iroute, Icontroller, IhistoryPushStateData } from "./JsMvcFwInterface.js";
+import { getUrlRoot, getControllerList, renderTemplate, renderAfter, frameworkReset } from "./JsMvcFw.js";
 
 let routeList: Iroute[] = [];
 let controller: Icontroller;
