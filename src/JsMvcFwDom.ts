@@ -90,7 +90,9 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
                 element.replaceChild(document.createTextNode(nodeNew), nodeDom);
             }
         } else if (typeof nodeNew === "object") {
-            const isControllerName = nodeDom?.nodeType === Node.ELEMENT_NODE && (nodeDom as Element).hasAttribute("jsmvcfw-controllername");
+            const isElementNode = nodeDom !== null && nodeDom !== undefined && nodeDom.nodeType === Node.ELEMENT_NODE;
+
+            const isControllerName = isElementNode && (nodeDom as Element).hasAttribute("jsmvcfw-controllername");
 
             if (isControllerName && !nodeNew.key) {
                 continue;
