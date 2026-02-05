@@ -318,6 +318,8 @@ export const renderAfter = (controller: Icontroller): Promise<void> => {
 
             if (variableLoadedLength > 0 && !isRendering) {
                 resolve();
+
+                return;
             } else {
                 Promise.resolve().then(check);
             }
