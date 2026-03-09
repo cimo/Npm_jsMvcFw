@@ -8,7 +8,9 @@ export default class Emitter<Events extends Record<string, unknown>> {
             this.listenerObject[event] = [];
         }
 
-        this.listenerObject[event]!.push(listener);
+        if (this.listenerObject[event]) {
+            this.listenerObject[event].push(listener);
+        }
     }
 
     emit<K extends keyof Events>(event: K, ...[payload]: Events[K] extends undefined ? [] : [Events[K]]): void {

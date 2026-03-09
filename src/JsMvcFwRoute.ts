@@ -47,7 +47,7 @@ const historyPush = (urlNext: string, parameterObject?: Record<string, unknown>,
     window.history.pushState(data, title, cleanUrl(urlNext));
 };
 
-const removeController = (): void => {
+const deleteController = (): void => {
     if (controller) {
         const controllerList = getControllerList();
 
@@ -61,7 +61,7 @@ const removeController = (): void => {
     }
 };
 
-const removeTrail = (value: string): string => {
+const deleteTrail = (value: string): string => {
     return value.endsWith("/") && value.length > 1 ? value.slice(0, -1) : value;
 };
 
@@ -75,10 +75,10 @@ const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record
     } else {
         let isNotFound = true;
 
-        const urlNextTrail = removeTrail(urlNext);
+        const urlNextTrail = deleteTrail(urlNext);
 
         for (const route of routeList) {
-            const routePathTrail = removeTrail(`${getUrlRoot()}${route.path}`);
+            const routePathTrail = deleteTrail(`${getUrlRoot()}${route.path}`);
 
             if (routePathTrail === urlNextTrail) {
                 isNotFound = false;
@@ -89,7 +89,7 @@ const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record
 
                 document.title = route.title;
 
-                removeController();
+                deleteController();
 
                 controller = route.controller();
 
@@ -139,7 +139,7 @@ export const route = (routeListValue: Iroute[]): void => {
     };
 
     window.onbeforeunload = () => {
-        removeController();
+        deleteController();
     };
 };
 

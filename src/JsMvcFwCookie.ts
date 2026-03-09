@@ -50,6 +50,6 @@ export const readCookie = <T>(tag: string): T | undefined => {
     return result;
 };
 
-export const removeCookie = (tag: string): void => {
+export const deleteCookie = (tag: string): void => {
     document.cookie = `${getAppLabel()}_${tag}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;`;
 };

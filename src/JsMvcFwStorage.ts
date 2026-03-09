@@ -19,6 +19,6 @@ export const readStorage = <T>(tag: string): T | undefined => {
     return result;
 };
 
-export const removeStorage = (tag: string): void => {
+export const deleteStorage = (tag: string): void => {
     localStorage.removeItem(`${getAppLabel()}_${tag}`);
 };
