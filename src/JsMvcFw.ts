@@ -310,19 +310,20 @@ export const renderAfter = (controller: Icontroller): Promise<void> => {
             const controllerName = controller.constructor.name;
 
             if (!variableLoadedList[controllerName]) {
-                return;
-            }
-
-            const variableLoadedLength = variableLoadedList[controllerName].length;
-            const isRendering = variableRenderUpdateObject[controllerName];
-
-            if (variableLoadedLength > 0 && !isRendering) {
                 resolve();
 
                 return;
-            } else {
-                Promise.resolve().then(check);
             }
+
+            const isRendering = variableRenderUpdateObject[controllerName];
+
+            if (!isRendering) {
+                resolve();
+
+                return;
+            }
+
+            Promise.resolve().then(check);
         };
 
         check();
