@@ -511,7 +511,7 @@ export const variableBind = <T extends Record<string, unknown>>(
     return result;
 };
 
-export const variableLink = (controllerNameSource: string): IvariableLink => {
+export const variableLink = <T>(controllerNameSource: string): IvariableLink<T> => {
     return {
         __jsmvcfwType: "variableLink",
         controllerNameSource

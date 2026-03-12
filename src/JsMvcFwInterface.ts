@@ -15,7 +15,8 @@ export interface IvariableHook<T> {
     setState: (value: T) => void;
 }
 
-export interface IvariableLink {
+export interface IvariableLink<T = unknown> {
+    __type?: T;
     __jsmvcfwType: "variableLink";
     controllerNameSource: string;
 }
@@ -62,7 +63,7 @@ export type TvirtualNodeProperty = string | number | boolean | (string | Ivirtua
 export type TvirtualNodeChildren = IvirtualNode | string | number;
 
 export type TvariableBindInput<T extends Record<string, unknown>> = {
-    [A in keyof T]: T[A] | IvariableLink;
+    [A in keyof T]: T[A] | IvariableLink<T[A]>;
 };
 
 export type Temitter = {
