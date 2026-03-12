@@ -1,7 +1,60 @@
 // Source
 import { TvirtualNodeProperty, IvirtualNode } from "./JsMvcFwInterface.js";
 
+const safeHtml = (html: string): string => {
+    const template = document.createElement("template");
+    template.innerHTML = html;
+
+    const blockElementList = ["script", "iframe", "object", "embed", "applet", "meta", "link", "style"].join(",");
+
+    template.content.querySelectorAll(blockElementList).forEach((element) => element.remove());
+
+    const elementList = template.content.querySelectorAll("*");
+
+    for (const element of elementList) {
+        const attributeList = [...element.attributes];
+
+        for (const attribute of attributeList) {
+            const name = attribute.name.toLowerCase();
+            const value = attribute.value.trim();
+
+            if (name.startsWith("on")) {
+                element.removeAttribute(attribute.name);
+
+                continue;
+            }
+
+            if (name === "href" || name === "src" || name === "xlink:href" || name === "action" || name === "formaction") {
+                const normalized = value.replace(/\s+/g, "").toLowerCase();
+
+                const isJs = normalized.startsWith("javascript:");
+                const isHtmlData = normalized.startsWith("data:text/html");
+                const isUnsafeData = normalized.startsWith("data:") && !normalized.startsWith("data:image/");
+
+                if (isJs || isHtmlData || isUnsafeData) {
+                    element.removeAttribute(attribute.name);
+                }
+            }
+
+            if (name === "srcdoc") {
+                element.removeAttribute(attribute.name);
+            }
+        }
+    }
+
+    return template.innerHTML;
+};
+
 const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProperty, valueOld?: TvirtualNodeProperty): void => {
+    if (key === "jsmvcfw-html") {
+        if (typeof valueNew === "string") {
+            element.innerHTML = safeHtml(valueNew);
+        } else {
+            element.innerHTML = "";
+        }
+        return;
+    }
+
     if (key.startsWith("on") && typeof valueNew === "function") {
         const eventName = key.slice(2).toLowerCase();
 
@@ -32,7 +85,9 @@ const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProp
 const updateProperty = (element: Element, oldList: Record<string, TvirtualNodeProperty>, newList: Record<string, TvirtualNodeProperty>): void => {
     for (const key in oldList) {
         if (!(key in newList)) {
-            if (key.startsWith("on") && typeof oldList[key] === "function") {
+            if (key === "jsmvcfw-html") {
+                element.innerHTML = "";
+            } else if (key.startsWith("on") && typeof oldList[key] === "function") {
                 element.removeEventListener(key.slice(2).toLowerCase(), oldList[key]);
             } else {
                 element.removeAttribute(key);
@@ -161,7 +216,14 @@ export const updateVirtualNode = (element: Element, nodeOld: IvirtualNode, nodeN
         return;
     }
 
-    updateProperty(element, nodeOld.propertyObject || {}, nodeNew.propertyObject || {});
+    const propertyOld = nodeOld.propertyObject || {};
+    const propertyNew = nodeNew.propertyObject || {};
+
+    updateProperty(element, propertyOld || {}, propertyNew || {});
+
+    if ("jsmvcfw-html" in propertyNew) {
+        return;
+    }
 
     updateChildren(element, nodeOld.childrenList, nodeNew.childrenList);
 };

@@ -1,20 +1,29 @@
 // Source
-import { IvirtualNode, IvariableBind, IvariableHook, IvariableEffect, Icontroller, IcallbackObserver } from "./JsMvcFwInterface.js";
+import {
+    IvirtualNode,
+    IvariableBind,
+    IvariableHook,
+    IvariableLink,
+    IvariableLinkPending,
+    IvariableEffect,
+    Icontroller,
+    IcallbackObserver,
+    TvariableBindInput,
+    Temitter
+} from "./JsMvcFwInterface.js";
 import { createVirtualNode, updateVirtualNode } from "./JsMvcFwDom.js";
 import Emitter from "./JsMvcFwEmitter.js";
-
-type Temitter = {
-    variableChanged: void;
-};
 
 let urlRoot: string = "";
 let appLabel: string = "";
 const virtualNodeObject: Record<string, IvirtualNode> = {};
 const renderTriggerObject: Record<string, () => void> = {};
+const variableBindRegistry: Record<string, Record<string, IvariableBind<unknown>>> = {};
 const variableLoadedList: Record<string, string[]> = {};
 const variableEditedList: Record<string, string[]> = {};
 const variableRenderUpdateObject: Record<string, boolean> = {};
 const variableHookObject: Record<string, unknown> = {};
+const variableLinkPendingList: IvariableLinkPending[] = [];
 const controllerList: Array<{ parent: Icontroller; childrenList: Icontroller[] }> = [];
 let cacheVariableProxyWeakMap = new WeakMap<object, unknown>();
 const emitterObject: { [controllerName: string]: Emitter<Temitter> } = {};
@@ -95,7 +104,7 @@ const variableProxy = <T>(stateLabel: string, stateValue: T, controllerName: str
 
 const variableBindItem = <T>(label: string, stateValue: T, controllerName: string): IvariableBind<T> => {
     let _state = variableProxy(label, stateValue, controllerName);
-    let _listener: ((value: T) => void) | null = null;
+    const _listenerList: Array<(value: T) => void> = [];
 
     return {
         get state(): T {
@@ -108,14 +117,14 @@ const variableBindItem = <T>(label: string, stateValue: T, controllerName: strin
 
             _state = variableProxy(label, value, controllerName);
 
-            if (_listener) {
-                _listener(_state);
+            for (const listener of _listenerList) {
+                listener(_state);
             }
 
             variableRenderUpdate(controllerName);
         },
         listener(callback: (value: T) => void): void {
-            _listener = callback;
+            _listenerList.push(callback);
         }
     };
 };
@@ -192,6 +201,57 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
     controllerValue.hookObject = hookObject;
 };
 
+const variableLinkReference = (value: unknown): value is IvariableLink => {
+    if (typeof value !== "object" || value === null) {
+        return false;
+    }
+
+    const target = value as Partial<IvariableLink>;
+
+    return target.__jsmvcfwType === "variableLink" && typeof target.controllerNameSource === "string";
+};
+
+const variableLinkClone = <T>(value: T): T => {
+    if (value === null || typeof value !== "object") {
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        return [...value] as T;
+    }
+
+    return { ...(value as Record<string, unknown>) } as T;
+};
+
+const variableLinkResolve = (target: IvariableLink, label: string, targetBind: IvariableBind<unknown>): boolean => {
+    const sourceControllerObject = variableBindRegistry[target.controllerNameSource];
+    const sourceBind = sourceControllerObject ? sourceControllerObject[label] : null;
+
+    if (!sourceBind) {
+        return false;
+    }
+
+    targetBind.state = variableLinkClone(sourceBind.state);
+
+    sourceBind.listener((nextValue) => {
+        targetBind.state = variableLinkClone(nextValue);
+    });
+
+    return true;
+};
+
+const variableLinkPendingFlush = (): void => {
+    for (let a = variableLinkPendingList.length - 1; a >= 0; a--) {
+        const pending = variableLinkPendingList[a];
+
+        const isResolved = variableLinkResolve(pending.target, pending.label, pending.targetBind);
+
+        if (isResolved) {
+            variableLinkPendingList.splice(a, 1);
+        }
+    }
+};
+
 export const setUrlRoot = (urlRootValue: string) => (urlRoot = urlRootValue);
 export const getUrlRoot = () => urlRoot;
 
@@ -217,72 +277,90 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
     controllerValue.variable();
 
-    const renderTrigger = () => {
-        const virtualNodeNew = controllerValue.view();
-
-        if (!virtualNodeNew || typeof virtualNodeNew !== "object" || !virtualNodeNew.tag) {
-            throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Invalid virtual node returned by controller "${controllerName}"!`);
-        }
-
-        let elementContainer: Element | null = null;
-
+    const renderTrigger = (): void => {
         if (!controllerParent) {
-            const elementRoot = document.getElementById("jsmvcfw_app");
+            const virtualNodeNew = controllerValue.view();
+            if (!virtualNodeNew || typeof virtualNodeNew !== "object" || !virtualNodeNew.tag) {
+                throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Invalid virtual node returned by controller "${controllerName}"!`);
+            }
 
+            const elementRoot = document.getElementById("jsmvcfw_app");
             if (!elementRoot) {
                 throw new Error("@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Root element #jsmvcfw_app not found!");
             }
 
-            elementContainer = elementRoot;
-        } else {
-            const parentContainer = document.querySelector(`[jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
-
-            if (!parentContainer) {
-                throw new Error(
-                    `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerParent.constructor.name}" not found!`
-                );
-            }
-
-            elementContainer = parentContainer.querySelector(`[jsmvcfw-controllerName="${controllerName}"]`);
-
-            if (!elementContainer) {
-                throw new Error(
-                    `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerName}" not found inside jsmvcfw-controllerName="${controllerParent.constructor.name}"!`
-                );
-            }
-        }
-
-        const virtualNodeOld = virtualNodeObject[controllerName];
-
-        if (!virtualNodeOld) {
-            if (elementContainer) {
+            const virtualNodeOld = virtualNodeObject[controllerName];
+            if (!virtualNodeOld) {
                 const elementVirtualNode = createVirtualNode(virtualNodeNew);
-
-                elementContainer.innerHTML = "";
-
-                elementContainer.appendChild(elementVirtualNode);
+                elementRoot.innerHTML = "";
+                elementRoot.appendChild(elementVirtualNode);
 
                 if (callback) {
                     callback();
                 }
-            }
-        } else {
-            if (elementContainer) {
-                const elementFirstChild = elementContainer.firstElementChild;
-
+            } else {
+                const elementFirstChild = elementRoot.firstElementChild;
                 if (elementFirstChild) {
                     updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
                 }
             }
+
+            virtualNodeObject[controllerName] = virtualNodeNew;
+            elementHook(elementRoot, controllerValue);
+
+            return;
         }
 
-        virtualNodeObject[controllerName] = virtualNodeNew;
+        const parentContainer = document.querySelector(`[jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
+        if (!parentContainer) {
+            throw new Error(
+                `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerParent.constructor.name}" not found!`
+            );
+        }
 
-        elementHook(elementContainer, controllerValue);
+        const elementContainerList = parentContainer.querySelectorAll(`[jsmvcfw-controllerName="${controllerName}"]`);
+        if (!elementContainerList.length) {
+            throw new Error(
+                `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerName}" not found inside jsmvcfw-controllerName="${controllerParent.constructor.name}"!`
+            );
+        }
+
+        let isFirstRenderAtLeastOne = false;
+
+        elementContainerList.forEach((elementContainer, index) => {
+            const viewAttribute = elementContainer.getAttribute("view");
+            const viewName = viewAttribute && viewAttribute.trim() !== "" ? viewAttribute.trim() : undefined;
+
+            const virtualNodeNew = controllerValue.view(viewName);
+            if (!virtualNodeNew || typeof virtualNodeNew !== "object" || !virtualNodeNew.tag) {
+                throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Invalid virtual node returned by controller "${controllerName}"!`);
+            }
+
+            const slotKey = `${controllerName}::${viewName || "__default__"}::${index}`;
+            const virtualNodeOld = virtualNodeObject[slotKey];
+
+            if (!virtualNodeOld) {
+                const elementVirtualNode = createVirtualNode(virtualNodeNew);
+                elementContainer.innerHTML = "";
+                elementContainer.appendChild(elementVirtualNode);
+                isFirstRenderAtLeastOne = true;
+            } else {
+                const elementFirstChild = elementContainer.firstElementChild;
+                if (elementFirstChild) {
+                    updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
+                }
+            }
+
+            virtualNodeObject[slotKey] = virtualNodeNew;
+            elementHook(elementContainer as HTMLElement, controllerValue);
+        });
+
+        if (isFirstRenderAtLeastOne && callback) {
+            callback();
+        }
     };
 
     renderTriggerObject[controllerName] = renderTrigger;
-
     renderTrigger();
 
     if (controllerValue.subControllerList) {
@@ -342,7 +420,6 @@ export const variableHook = <T>(label: string, stateValue: T, controllerName: st
         }
 
         variableLoadedList[controllerName].push(label);
-
         variableHookObject[controllerName] = variableProxy(label, stateValue, controllerName);
     }
 
@@ -361,7 +438,7 @@ export const variableHook = <T>(label: string, stateValue: T, controllerName: st
 };
 
 export const variableBind = <T extends Record<string, unknown>>(
-    variableObject: T,
+    inputObject: TvariableBindInput<T>,
     controllerName: string
 ): { [A in keyof T]: IvariableBind<T[A]> } => {
     const result = {} as { [A in keyof T]: IvariableBind<T[A]> };
@@ -371,19 +448,74 @@ export const variableBind = <T extends Record<string, unknown>>(
         variableEditedList[controllerName] = [];
     }
 
-    for (const key in variableObject) {
-        if (Object.prototype.hasOwnProperty.call(variableObject, key)) {
-            if (variableLoadedList[controllerName].includes(key)) {
-                throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableBind() => The method variableBind use existing label "${key}"!`);
-            }
+    if (!variableBindRegistry[controllerName]) {
+        variableBindRegistry[controllerName] = {};
+    }
 
-            variableLoadedList[controllerName].push(key);
+    for (const key in inputObject) {
+        if (!Object.prototype.hasOwnProperty.call(inputObject, key)) {
+            continue;
+        }
 
-            result[key] = variableBindItem(key, variableObject[key] as T[typeof key], controllerName);
+        if (variableLoadedList[controllerName].includes(key)) {
+            throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableBind() => The method variableBind use existing label "${key}"!`);
+        }
+
+        variableLoadedList[controllerName].push(key);
+
+        const keyTyped = key as keyof T;
+        const target = inputObject[keyTyped];
+        let initialValue: unknown = target;
+
+        if (variableLinkReference(target)) {
+            const sourceControllerObject = variableBindRegistry[target.controllerNameSource];
+            const sourceBind = sourceControllerObject ? sourceControllerObject[key] : null;
+
+            initialValue = sourceBind ? variableLinkClone(sourceBind.state) : undefined;
+        }
+
+        const bindItem = variableBindItem(key, initialValue as T[typeof keyTyped], controllerName);
+
+        result[keyTyped] = bindItem;
+
+        variableBindRegistry[controllerName][key] = bindItem as IvariableBind<unknown>;
+    }
+
+    for (const key in inputObject) {
+        if (!Object.prototype.hasOwnProperty.call(inputObject, key)) {
+            continue;
+        }
+
+        const keyTyped = key as keyof T;
+        const target = inputObject[keyTyped];
+
+        if (!variableLinkReference(target)) {
+            continue;
+        }
+
+        const targetBind = result[keyTyped] as IvariableBind<unknown>;
+
+        const isResolved = variableLinkResolve(target, key, targetBind);
+
+        if (!isResolved) {
+            variableLinkPendingList.push({
+                target,
+                label: key,
+                targetBind
+            });
         }
     }
 
+    variableLinkPendingFlush();
+
     return result;
+};
+
+export const variableLink = (controllerNameSource: string): IvariableLink => {
+    return {
+        __jsmvcfwType: "variableLink",
+        controllerNameSource
+    };
 };
 
 export const elementObserver = (element: HTMLElement, callback: IcallbackObserver): void => {
@@ -438,10 +570,12 @@ export const elementObserverOn = (element: HTMLElement): void => {
 export const frameworkReset = (): void => {
     Object.keys(virtualNodeObject).forEach((key) => delete virtualNodeObject[key]);
     Object.keys(renderTriggerObject).forEach((key) => delete renderTriggerObject[key]);
+    Object.keys(variableBindRegistry).forEach((key) => delete variableBindRegistry[key]);
     Object.keys(variableLoadedList).forEach((key) => delete variableLoadedList[key]);
     Object.keys(variableEditedList).forEach((key) => delete variableEditedList[key]);
     Object.keys(variableRenderUpdateObject).forEach((key) => delete variableRenderUpdateObject[key]);
     Object.keys(variableHookObject).forEach((key) => delete variableHookObject[key]);
+    variableLinkPendingList.length = 0;
     controllerList.length = 0;
     cacheVariableProxyWeakMap = new WeakMap();
     Object.keys(emitterObject).forEach((key) => delete emitterObject[key]);
