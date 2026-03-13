@@ -64,6 +64,34 @@ const checkDynamicElement = (childrenListValue: TvirtualNodeChildren[]): void =>
     }
 };
 
+const flattenChildren = (input: unknown, out: Array<IvirtualNode | string>): void => {
+    if (input == null) {
+        return;
+    }
+
+    if (Array.isArray(input)) {
+        for (let i = 0; i < input.length; i++) {
+            flattenChildren(input[i], out);
+        }
+
+        return;
+    }
+
+    if (typeof input === "number") {
+        out.push(String(input));
+        return;
+    }
+
+    if (typeof input === "string") {
+        out.push(input);
+        return;
+    }
+
+    if (typeof input === "object" && "tag" in (input as Record<string, unknown>)) {
+        out.push(input as IvirtualNode);
+    }
+};
+
 export const jsxFactory = (
     tag: string | ((props: { children: Array<IvirtualNode | string> }) => Array<IvirtualNode | string>),
     propertyObjectValue: IvirtualNode["propertyObject"] = {},
@@ -72,25 +100,7 @@ export const jsxFactory = (
     const childrenList: Array<IvirtualNode | string> = [];
 
     for (let a = 0; a < childrenListValue.length; a++) {
-        const child = childrenListValue[a];
-
-        if (child == null) {
-            continue;
-        }
-
-        if (Array.isArray(child)) {
-            for (let b = 0; b < child.length; b++) {
-                const childNested = child[b];
-
-                if (childNested == null) {
-                    continue;
-                }
-
-                childrenList.push(typeof childNested === "number" ? String(childNested) : childNested);
-            }
-        } else {
-            childrenList.push(typeof child === "number" ? String(child) : child);
-        }
+        flattenChildren(childrenListValue[a], childrenList);
     }
 
     checkDynamicElement(childrenListValue);
