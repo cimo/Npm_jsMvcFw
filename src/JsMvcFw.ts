@@ -231,11 +231,36 @@ const variableLinkResolve = (target: IvariableLink, label: string, targetBind: I
         return false;
     }
 
-    targetBind.state = variableLinkClone(sourceBind.state);
+    let isSyncing = false;
 
-    sourceBind.listener((nextValue) => {
-        targetBind.state = variableLinkClone(nextValue);
-    });
+    const syncSourceToTarget = (nextValue: unknown): void => {
+        if (isSyncing || Object.is(targetBind.state, nextValue)) {
+            return;
+        }
+
+        isSyncing = true;
+
+        targetBind.state = nextValue;
+
+        isSyncing = false;
+    };
+
+    const syncTargetToSource = (nextValue: unknown): void => {
+        if (isSyncing || Object.is(sourceBind.state, nextValue)) {
+            return;
+        }
+
+        isSyncing = true;
+
+        sourceBind.state = nextValue;
+
+        isSyncing = false;
+    };
+
+    syncSourceToTarget(sourceBind.state);
+
+    sourceBind.listener(syncSourceToTarget);
+    targetBind.listener(syncTargetToSource);
 
     return true;
 };
