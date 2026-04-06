@@ -52,6 +52,7 @@ const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProp
         } else {
             element.innerHTML = "";
         }
+
         return;
     }
 
@@ -64,8 +65,18 @@ const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProp
 
         element.addEventListener(eventName, valueNew);
     } else if (typeof valueNew === "boolean") {
+        if (key === "selected" && "selected" in element) {
+            element.selected = valueNew;
+        } else if (key === "checked" && "checked" in element) {
+            element.checked = valueNew;
+        }
+
         valueNew ? element.setAttribute(key, "") : element.removeAttribute(key);
     } else if (typeof valueNew === "string" || typeof valueNew === "number") {
+        if (key === "value" && "value" in element) {
+            element.value = valueNew.toString();
+        }
+
         element.setAttribute(key, valueNew.toString());
     } else if (Array.isArray(valueNew)) {
         let stringValue = "";
@@ -78,6 +89,14 @@ const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProp
 
         element.setAttribute(key, stringValue.trim());
     } else if (valueNew == null) {
+        if (key === "selected" && "selected" in element) {
+            element.selected = false;
+        } else if (key === "checked" && "checked" in element) {
+            element.checked = false;
+        } else if (key === "value" && "value" in element) {
+            element.value = "";
+        }
+
         element.removeAttribute(key);
     }
 };
