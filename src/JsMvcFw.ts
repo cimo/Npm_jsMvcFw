@@ -198,7 +198,25 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
         }
     }
 
-    controllerValue.hookObject = hookObject;
+    const hookObjectMerged = { ...hookObject };
+    const hookObjectCurrent = controllerValue.hookObject || {};
+
+    for (const [key, value] of Object.entries(hookObjectCurrent)) {
+        if (hookObjectMerged[key]) {
+            continue;
+        }
+
+        const valueList = Array.isArray(value) ? value : [value];
+        const valueConnectedList = valueList.filter((item) => item && item.isConnected);
+
+        if (!valueConnectedList.length) {
+            continue;
+        }
+
+        hookObjectMerged[key] = valueConnectedList.length === 1 ? valueConnectedList[0] : valueConnectedList;
+    }
+
+    controllerValue.hookObject = hookObjectMerged;
 };
 
 const variableLinkReference = (value: unknown): value is IvariableLink => {
@@ -277,6 +295,18 @@ const variableLinkPendingFlush = (): void => {
     }
 };
 
+const normalizeVirtualNode = (node: IvirtualNode) => {
+    if (Array.isArray(node)) {
+        return {
+            tag: "div",
+            propertyObject: { style: "display: contents;" },
+            childrenList: node
+        };
+    }
+
+    return node;
+};
+
 export const setUrlRoot = (urlRootValue: string) => (urlRoot = urlRootValue);
 export const getUrlRoot = () => urlRoot;
 
@@ -304,17 +334,21 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
     const renderTrigger = (): void => {
         if (!controllerParent) {
-            const virtualNodeNew = controllerValue.view();
+            let virtualNodeNew = controllerValue.view();
+            virtualNodeNew = normalizeVirtualNode(virtualNodeNew);
+
             if (!virtualNodeNew || typeof virtualNodeNew !== "object" || !virtualNodeNew.tag) {
                 throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Invalid virtual node returned by controller "${controllerName}"!`);
             }
 
             const elementRoot = document.getElementById("jsmvcfw_app");
+
             if (!elementRoot) {
                 throw new Error("@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Root element #jsmvcfw_app not found!");
             }
 
             const virtualNodeOld = virtualNodeObject[controllerName];
+
             if (!virtualNodeOld) {
                 const elementVirtualNode = createVirtualNode(virtualNodeNew);
                 elementRoot.innerHTML = "";
@@ -337,6 +371,7 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
         }
 
         const parentContainer = document.querySelector(`[jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
+
         if (!parentContainer) {
             throw new Error(
                 `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerParent.constructor.name}" not found!`
@@ -344,6 +379,7 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
         }
 
         const elementContainerList = parentContainer.querySelectorAll(`[jsmvcfw-controllerName="${controllerName}"]`);
+
         if (!elementContainerList.length) {
             throw new Error(
                 `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerName}" not found inside jsmvcfw-controllerName="${controllerParent.constructor.name}"!`
@@ -356,7 +392,9 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
             const viewAttribute = elementContainer.getAttribute("view");
             const viewName = viewAttribute && viewAttribute.trim() !== "" ? viewAttribute.trim() : undefined;
 
-            const virtualNodeNew = controllerValue.view(viewName);
+            let virtualNodeNew = controllerValue.view(viewName);
+            virtualNodeNew = normalizeVirtualNode(virtualNodeNew);
+
             if (!virtualNodeNew || typeof virtualNodeNew !== "object" || !virtualNodeNew.tag) {
                 throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Invalid virtual node returned by controller "${controllerName}"!`);
             }
@@ -368,15 +406,18 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
                 const elementVirtualNode = createVirtualNode(virtualNodeNew);
                 elementContainer.innerHTML = "";
                 elementContainer.appendChild(elementVirtualNode);
+
                 isFirstRenderAtLeastOne = true;
             } else {
                 const elementFirstChild = elementContainer.firstElementChild;
+
                 if (elementFirstChild) {
                     updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
                 }
             }
 
             virtualNodeObject[slotKey] = virtualNodeNew;
+
             elementHook(elementContainer as HTMLElement, controllerValue);
         });
 
