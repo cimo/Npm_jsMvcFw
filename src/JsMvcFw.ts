@@ -117,7 +117,9 @@ const variableBindItem = <T>(label: string, stateValue: T, controllerName: strin
 
             _state = variableProxy(label, value, controllerName);
 
-            for (const listener of _listenerList) {
+            for (let a = 0; a < _listenerList.length; a++) {
+                const listener = _listenerList[a];
+
                 listener(_state);
             }
 
@@ -140,7 +142,9 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
         const editedList = variableEditedList[controllerName] || [];
 
         callback((groupObject) => {
-            for (const group of groupObject) {
+            for (let a = 0; a < groupObject.length; a++) {
+                const group = groupObject[a];
+
                 let isAllEdited = true;
 
                 for (let b = 0; b < group.list.length; b++) {
@@ -156,7 +160,9 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
                 if (isAllEdited) {
                     group.action();
 
-                    for (const key of group.list) {
+                    for (let b = 0; b < group.list.length; b++) {
+                        const key = group.list[b];
+
                         const index = editedList.indexOf(key);
 
                         if (index !== -1) {
@@ -175,7 +181,9 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
     const elementHookList = elementContainer.querySelectorAll("[jsmvcfw-elementHookName]");
     const hookObject: Record<string, Element | Element[]> = {};
 
-    for (const elementHook of elementHookList) {
+    for (let a = 0; a < elementHookList.length; a++) {
+        const elementHook = elementHookList[a];
+
         const attribute = elementHook.getAttribute("jsmvcfw-elementHookName");
 
         if (attribute) {
@@ -201,13 +209,23 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
     const hookObjectMerged = { ...hookObject };
     const hookObjectCurrent = controllerValue.hookObject || {};
 
-    for (const [key, value] of Object.entries(hookObjectCurrent)) {
+    const entryList = Object.entries(hookObjectCurrent);
+
+    for (let a = 0; a < entryList.length; a++) {
+        const [key, value] = entryList[a];
+
         if (hookObjectMerged[key]) {
             continue;
         }
 
         const valueList = Array.isArray(value) ? value : [value];
-        const valueConnectedList = valueList.filter((item) => item && item.isConnected);
+        const valueConnectedList = [];
+
+        for (let a = 0; a < valueList.length; a++) {
+            if (valueList[a] && valueList[a].isConnected) {
+                valueConnectedList.push(valueList[a]);
+            }
+        }
 
         if (!valueConnectedList.length) {
             continue;
@@ -321,7 +339,9 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
     if (!controllerParent) {
         controllerList.push({ parent: controllerValue, childrenList: [] });
     } else {
-        for (const controller of controllerList) {
+        for (let a = 0; a < controllerList.length; a++) {
+            const controller = controllerList[a];
+
             if (controllerParent.constructor.name === controller.parent.constructor.name) {
                 controller.childrenList.push(controllerValue);
 
@@ -388,8 +408,8 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
         let isFirstRenderAtLeastOne = false;
 
-        elementContainerList.forEach((elementContainer, index) => {
-            const viewAttribute = elementContainer.getAttribute("view");
+        for (let a = 0; a < elementContainerList.length; a++) {
+            const viewAttribute = elementContainerList[a].getAttribute("view");
             const viewName = viewAttribute && viewAttribute.trim() !== "" ? viewAttribute.trim() : undefined;
 
             let virtualNodeNew = controllerValue.view(viewName);
@@ -399,17 +419,17 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
                 throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Invalid virtual node returned by controller "${controllerName}"!`);
             }
 
-            const slotKey = `${controllerName}::${viewName || "__default__"}::${index}`;
+            const slotKey = `${controllerName}::${viewName || "__default__"}::${a}`;
             const virtualNodeOld = virtualNodeObject[slotKey];
 
             if (!virtualNodeOld) {
                 const elementVirtualNode = createVirtualNode(virtualNodeNew);
-                elementContainer.innerHTML = "";
-                elementContainer.appendChild(elementVirtualNode);
+                elementContainerList[a].innerHTML = "";
+                elementContainerList[a].appendChild(elementVirtualNode);
 
                 isFirstRenderAtLeastOne = true;
             } else {
-                const elementFirstChild = elementContainer.firstElementChild;
+                const elementFirstChild = elementContainerList[a].firstElementChild;
 
                 if (elementFirstChild) {
                     updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
@@ -418,8 +438,8 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
             virtualNodeObject[slotKey] = virtualNodeNew;
 
-            elementHook(elementContainer as HTMLElement, controllerValue);
-        });
+            elementHook(elementContainerList[a] as HTMLElement, controllerValue);
+        }
 
         if (isFirstRenderAtLeastOne && callback) {
             callback();
@@ -432,7 +452,9 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
     if (controllerValue.subControllerList) {
         const subControllerList = controllerValue.subControllerList();
 
-        for (const subController of subControllerList) {
+        for (let a = 0; a < subControllerList.length; a++) {
+            const subController = subControllerList[a];
+
             renderTemplate(subController, controllerValue, () => {
                 subController.event();
 
@@ -518,10 +540,11 @@ export const variableBind = <T extends Record<string, unknown>>(
         variableBindRegistry[controllerName] = {};
     }
 
-    for (const key in inputObject) {
-        if (!Object.prototype.hasOwnProperty.call(inputObject, key)) {
-            continue;
-        }
+    const keyList = Object.keys(inputObject) as (keyof T)[];
+
+    for (let a = 0; a < keyList.length; a++) {
+        const keyTyped = keyList[a];
+        const key = String(keyTyped);
 
         if (variableLoadedList[controllerName].includes(key)) {
             throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableBind() => The method variableBind use existing label "${key}"!`);
@@ -529,7 +552,6 @@ export const variableBind = <T extends Record<string, unknown>>(
 
         variableLoadedList[controllerName].push(key);
 
-        const keyTyped = key as keyof T;
         const target = inputObject[keyTyped];
         let initialValue: unknown = target;
 
@@ -547,12 +569,9 @@ export const variableBind = <T extends Record<string, unknown>>(
         variableBindRegistry[controllerName][key] = bindItem as IvariableBind<unknown>;
     }
 
-    for (const key in inputObject) {
-        if (!Object.prototype.hasOwnProperty.call(inputObject, key)) {
-            continue;
-        }
-
-        const keyTyped = key as keyof T;
+    for (let a = 0; a < keyList.length; a++) {
+        const keyTyped = keyList[a];
+        const key = String(keyTyped);
         const target = inputObject[keyTyped];
 
         if (!variableLinkReference(target)) {
@@ -596,8 +615,12 @@ export const elementObserver = (element: HTMLElement, callback: IcallbackObserve
                 return;
             }
 
-            for (const mutationRecord of mutationRecordList) {
-                for (const callback of callbackList) {
+            for (let a = 0; a < mutationRecordList.length; a++) {
+                const mutationRecord = mutationRecordList[a];
+
+                for (let b = 0; b < callbackList.length; b++) {
+                    const callback = callbackList[b];
+
                     callback(element, mutationRecord);
                 }
             }
@@ -634,17 +657,58 @@ export const elementObserverOn = (element: HTMLElement): void => {
 };
 
 export const frameworkReset = (): void => {
-    Object.keys(virtualNodeObject).forEach((key) => delete virtualNodeObject[key]);
-    Object.keys(renderTriggerObject).forEach((key) => delete renderTriggerObject[key]);
-    Object.keys(variableBindRegistry).forEach((key) => delete variableBindRegistry[key]);
-    Object.keys(variableLoadedList).forEach((key) => delete variableLoadedList[key]);
-    Object.keys(variableEditedList).forEach((key) => delete variableEditedList[key]);
-    Object.keys(variableRenderUpdateObject).forEach((key) => delete variableRenderUpdateObject[key]);
-    Object.keys(variableHookObject).forEach((key) => delete variableHookObject[key]);
+    const virtualNodeKeyList = Object.keys(virtualNodeObject);
+
+    for (let a = 0; a < virtualNodeKeyList.length; a++) {
+        delete virtualNodeObject[virtualNodeKeyList[a]];
+    }
+
+    const renderTriggerKeyList = Object.keys(renderTriggerObject);
+
+    for (let a = 0; a < renderTriggerKeyList.length; a++) {
+        delete renderTriggerObject[renderTriggerKeyList[a]];
+    }
+
+    const variableBindKeyList = Object.keys(variableBindRegistry);
+
+    for (let a = 0; a < variableBindKeyList.length; a++) {
+        delete variableBindRegistry[variableBindKeyList[a]];
+    }
+
+    const variableLoadedKeyList = Object.keys(variableLoadedList);
+
+    for (let a = 0; a < variableLoadedKeyList.length; a++) {
+        delete variableLoadedList[variableLoadedKeyList[a]];
+    }
+
+    const variableEditedKeyList = Object.keys(variableEditedList);
+
+    for (let a = 0; a < variableEditedKeyList.length; a++) {
+        delete variableEditedList[variableEditedKeyList[a]];
+    }
+
+    const variableRenderUpdateKeyList = Object.keys(variableRenderUpdateObject);
+
+    for (let a = 0; a < variableRenderUpdateKeyList.length; a++) {
+        delete variableRenderUpdateObject[variableRenderUpdateKeyList[a]];
+    }
+
+    const variableHookKeyList = Object.keys(variableHookObject);
+
+    for (let a = 0; a < variableHookKeyList.length; a++) {
+        delete variableHookObject[variableHookKeyList[a]];
+    }
+
     variableLinkPendingList.length = 0;
     controllerList.length = 0;
     cacheVariableProxyWeakMap = new WeakMap();
-    Object.keys(emitterObject).forEach((key) => delete emitterObject[key]);
+
+    const emitterKeyList = Object.keys(emitterObject);
+
+    for (let a = 0; a < emitterKeyList.length; a++) {
+        delete emitterObject[emitterKeyList[a]];
+    }
+
     observerWeakMap = new WeakMap();
     callbackObserverWeakMap = new WeakMap();
 };

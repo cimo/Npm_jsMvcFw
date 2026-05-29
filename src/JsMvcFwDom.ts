@@ -7,14 +7,22 @@ const safeHtml = (html: string): string => {
 
     const blockElementList = ["script", "iframe", "object", "embed", "applet", "meta", "link", "style"].join(",");
 
-    template.content.querySelectorAll(blockElementList).forEach((element) => element.remove());
+    const blockElementNodeList = template.content.querySelectorAll(blockElementList);
+
+    for (let a = 0; a < blockElementNodeList.length; a++) {
+        blockElementNodeList[a].remove();
+    }
 
     const elementList = template.content.querySelectorAll("*");
 
-    for (const element of elementList) {
+    for (let a = 0; a < elementList.length; a++) {
+        const element = elementList[a];
+
         const attributeList = [...element.attributes];
 
-        for (const attribute of attributeList) {
+        for (let b = 0; b < attributeList.length; b++) {
+            const attribute = attributeList[b];
+
             const name = attribute.name.toLowerCase();
             const value = attribute.value.trim();
 
@@ -81,7 +89,9 @@ const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProp
     } else if (Array.isArray(valueNew)) {
         let stringValue = "";
 
-        for (const value of valueNew) {
+        for (let a = 0; a < valueNew.length; a++) {
+            const value = valueNew[a];
+
             if (typeof value === "string") {
                 stringValue += value + " ";
             }
@@ -102,7 +112,11 @@ const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProp
 };
 
 const updateProperty = (element: Element, oldList: Record<string, TvirtualNodeProperty>, newList: Record<string, TvirtualNodeProperty>): void => {
-    for (const key in oldList) {
+    const oldKeyList = Object.keys(oldList);
+
+    for (let a = 0; a < oldKeyList.length; a++) {
+        const key = oldKeyList[a];
+
         if (!(key in newList)) {
             if (key === "jsmvcfw-html") {
                 element.innerHTML = "";
@@ -114,7 +128,13 @@ const updateProperty = (element: Element, oldList: Record<string, TvirtualNodePr
         }
     }
 
-    for (const [key, value] of Object.entries(newList)) {
+    const entryList = Object.entries(newList);
+
+    for (let a = 0; a < entryList.length; a++) {
+        const entry = entryList[a];
+        const key = entry[0];
+        const value = entry[1];
+
         const valueOld = oldList[key];
 
         if (value !== valueOld) {
@@ -209,12 +229,18 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
 export const createVirtualNode = (node: IvirtualNode): HTMLElement => {
     const element = document.createElement(node.tag);
 
-    for (const [key, value] of Object.entries(node.propertyObject || {})) {
+    const entryList = Object.entries(node.propertyObject || {});
+
+    for (let a = 0; a < entryList.length; a++) {
+        const [key, value] = entryList[a];
+
         applyProperty(element, key, value);
     }
 
     if (Array.isArray(node.childrenList)) {
-        for (const child of node.childrenList) {
+        for (let a = 0; a < node.childrenList.length; a++) {
+            const child = node.childrenList[a];
+
             if (typeof child === "string") {
                 element.appendChild(document.createTextNode(child));
             } else {

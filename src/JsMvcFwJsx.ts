@@ -10,6 +10,10 @@ const stackErrorDetail = (): string => {
 
     const stackSplit = stack.split("\n");
 
+    if (!stackSplit[2]) {
+        return "unknown";
+    }
+
     const callerLine = stackSplit[2].trim() || "unknown";
 
     return callerLine.charAt(0).toUpperCase() + callerLine.slice(1).toLowerCase();
@@ -35,7 +39,9 @@ const checkDynamicElement = (childrenListValue: TvirtualNodeChildren[]): void =>
 
             const childrenList = isFromArray ? childEntry : [childEntry];
 
-            for (const children of childrenList) {
+            for (let b = 0; b < childrenList.length; b++) {
+                const children = childrenList[b];
+
                 const node = typeof children === "number" ? String(children) : children;
 
                 if (typeof node === "object" && "tag" in node) {
@@ -49,11 +55,28 @@ const checkDynamicElement = (childrenListValue: TvirtualNodeChildren[]): void =>
         }
 
         const errorDetail = stackErrorDetail();
+        const tagList = Object.keys(tagObject);
 
-        for (const tag in tagObject) {
+        for (let a = 0; a < tagList.length; a++) {
+            const tag = tagList[a];
             const group = tagObject[tag];
-            const keyMissingList = group.filter(({ node }) => node.key === undefined);
-            const isAllFromArray = group.every(({ isFromArray }) => isFromArray);
+            const keyMissingList = [];
+
+            for (let b = 0; b < group.length; b++) {
+                if (group[b].node.key === undefined) {
+                    keyMissingList.push(group[b]);
+                }
+            }
+
+            let isAllFromArray = true;
+
+            for (let b = 0; b < group.length; b++) {
+                if (!group[b].isFromArray) {
+                    isAllFromArray = false;
+
+                    break;
+                }
+            }
 
             if (group.length > 1 && keyMissingList.length > 0 && isAllFromArray) {
                 throw new Error(
@@ -70,8 +93,8 @@ const flattenChildren = (input: unknown, out: Array<IvirtualNode | string>): voi
     }
 
     if (Array.isArray(input)) {
-        for (let i = 0; i < input.length; i++) {
-            flattenChildren(input[i], out);
+        for (let a = 0; a < input.length; a++) {
+            flattenChildren(input[a], out);
         }
 
         return;

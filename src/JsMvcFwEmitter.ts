@@ -17,7 +17,9 @@ export default class Emitter<Events extends Record<string, unknown>> {
         const listenerEventList = this.listenerObject[event];
 
         if (listenerEventList) {
-            for (const listener of listenerEventList) {
+            for (let a = 0; a < listenerEventList.length; a++) {
+                const listener = listenerEventList[a];
+
                 listener(payload as Events[K]);
             }
         }

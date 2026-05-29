@@ -52,7 +52,9 @@ const deleteController = (): void => {
         const controllerList = getControllerList();
 
         for (let a = controllerList.length - 1; a >= 0; a--) {
-            for (const children of controllerList[a].childrenList) {
+            for (let b = 0; b < controllerList[a].childrenList.length; b++) {
+                const children = controllerList[a].childrenList[b];
+
                 children.destroy();
             }
         }
@@ -77,7 +79,9 @@ const populatePage = (urlNext: string, isSoft: boolean, parameterObject?: Record
 
         const urlNextTrail = deleteTrail(urlNext);
 
-        for (const route of routeList) {
+        for (let a = 0; a < routeList.length; a++) {
+            const route = routeList[a];
+
             const routePathTrail = deleteTrail(`${getUrlRoot()}${route.path}`);
 
             if (routePathTrail === urlNextTrail) {
@@ -129,9 +133,9 @@ export const route = (routeListValue: Iroute[]): void => {
     };
 
     window.onpopstate = (event: PopStateEvent) => {
-        const data = event.state as IhistoryPushStateData;
+        const data = event.state as IhistoryPushStateData | null;
 
-        if (data.urlPrevious) {
+        if (data && data.urlPrevious) {
             populatePage(data.urlPrevious, true);
         } else {
             populatePage(window.location.pathname, true);
