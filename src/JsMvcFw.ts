@@ -18,9 +18,9 @@ let urlRoot: string = "";
 let appLabel: string = "";
 const virtualNodeObject: Record<string, IvirtualNode> = {};
 const renderTriggerObject: Record<string, () => void> = {};
-const variableBindRegistry: Record<string, Record<string, IvariableBind<unknown>>> = {};
-const variableLoadedList: Record<string, string[]> = {};
-const variableEditedList: Record<string, string[]> = {};
+const variableBindRegistryObject: Record<string, Record<string, IvariableBind<unknown>>> = {};
+const variableLoadedObject: Record<string, string[]> = {};
+const variableEditedObject: Record<string, string[]> = {};
 const variableRenderUpdateObject: Record<string, boolean> = {};
 const variableHookObject: Record<string, unknown> = {};
 const variableLinkPendingList: IvariableLinkPending[] = [];
@@ -70,8 +70,8 @@ const variableProxy = <T>(stateLabel: string, stateValue: T, controllerName: str
             return result;
         },
         set(target, property, newValue, receiver) {
-            if (variableEditedList[controllerName] && !variableEditedList[controllerName].includes(stateLabel)) {
-                variableEditedList[controllerName].push(stateLabel);
+            if (variableEditedObject[controllerName] && !variableEditedObject[controllerName].includes(stateLabel)) {
+                variableEditedObject[controllerName].push(stateLabel);
             }
 
             const isSuccess = Reflect.set(target, property, newValue, receiver);
@@ -83,8 +83,8 @@ const variableProxy = <T>(stateLabel: string, stateValue: T, controllerName: str
             return isSuccess;
         },
         deleteProperty(target, property) {
-            if (variableEditedList[controllerName] && !variableEditedList[controllerName].includes(stateLabel)) {
-                variableEditedList[controllerName].push(stateLabel);
+            if (variableEditedObject[controllerName] && !variableEditedObject[controllerName].includes(stateLabel)) {
+                variableEditedObject[controllerName].push(stateLabel);
             }
 
             const isSuccess = Reflect.deleteProperty(target, property);
@@ -111,8 +111,8 @@ const variableBindItem = <T>(label: string, stateValue: T, controllerName: strin
             return _state;
         },
         set state(value: T) {
-            if (variableEditedList[controllerName] && !variableEditedList[controllerName].includes(label)) {
-                variableEditedList[controllerName].push(label);
+            if (variableEditedObject[controllerName] && !variableEditedObject[controllerName].includes(label)) {
+                variableEditedObject[controllerName].push(label);
             }
 
             _state = variableProxy(label, value, controllerName);
@@ -139,16 +139,16 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
     const emitter = emitterObject[controllerName];
 
     emitter.on("variableChanged", () => {
-        const editedList = variableEditedList[controllerName] || [];
+        const editedList = variableEditedObject[controllerName] || [];
 
-        callback((groupObject) => {
-            for (let a = 0; a < groupObject.length; a++) {
-                const group = groupObject[a];
+        callback((groupList) => {
+            for (let a = 0; a < groupList.length; a++) {
+                const group = groupList[a];
 
                 let isAllEdited = true;
 
-                for (let b = 0; b < group.list.length; b++) {
-                    const key = group.list[b];
+                for (let b = 0; b < group.variableList.length; b++) {
+                    const key = group.variableList[b];
 
                     if (editedList.indexOf(key) === -1) {
                         isAllEdited = false;
@@ -160,8 +160,8 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
                 if (isAllEdited) {
                     group.action();
 
-                    for (let b = 0; b < group.list.length; b++) {
-                        const key = group.list[b];
+                    for (let b = 0; b < group.variableList.length; b++) {
+                        const key = group.variableList[b];
 
                         const index = editedList.indexOf(key);
 
@@ -172,14 +172,14 @@ const variableWatch = (controllerName: string, callback: (watch: IvariableEffect
                 }
             }
 
-            variableEditedList[controllerName] = editedList;
+            variableEditedObject[controllerName] = editedList;
         });
     });
 };
 
 const elementHook = (elementContainer: Element, controllerValue: Icontroller): void => {
     const elementHookList = elementContainer.querySelectorAll("[jsmvcfw-elementHookName]");
-    const hookObject: Record<string, Element | Element[]> = {};
+    const hookObject = {} as Record<string, Element | Element[]>;
 
     for (let a = 0; a < elementHookList.length; a++) {
         const elementHook = elementHookList[a];
@@ -260,7 +260,7 @@ const variableLinkClone = <T>(value: T): T => {
 };
 
 const variableLinkResolve = (target: IvariableLink, label: string, targetBind: IvariableBind<unknown>): boolean => {
-    const sourceControllerObject = variableBindRegistry[target.controllerNameSource];
+    const sourceControllerObject = variableBindRegistryObject[target.controllerNameSource];
     const sourceBind = sourceControllerObject ? sourceControllerObject[label] : null;
 
     if (!sourceBind) {
@@ -475,7 +475,7 @@ export const renderAfter = (controller: Icontroller): Promise<void> => {
         const check = () => {
             const controllerName = controller.constructor.name;
 
-            if (!variableLoadedList[controllerName]) {
+            if (!variableLoadedObject[controllerName]) {
                 resolve();
 
                 return;
@@ -498,24 +498,24 @@ export const renderAfter = (controller: Icontroller): Promise<void> => {
 
 export const variableHook = <T>(label: string, stateValue: T, controllerName: string): IvariableHook<T> => {
     if (!(controllerName in variableHookObject)) {
-        if (!variableLoadedList[controllerName]) {
-            variableLoadedList[controllerName] = [];
-            variableEditedList[controllerName] = [];
+        if (!variableLoadedObject[controllerName]) {
+            variableLoadedObject[controllerName] = [];
+            variableEditedObject[controllerName] = [];
         }
 
-        if (variableLoadedList[controllerName].includes(label)) {
+        if (variableLoadedObject[controllerName].includes(label)) {
             throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableHook() => The method variableHook use existing label "${label}"!`);
         }
 
-        variableLoadedList[controllerName].push(label);
+        variableLoadedObject[controllerName].push(label);
         variableHookObject[controllerName] = variableProxy(label, stateValue, controllerName);
     }
 
     return {
         state: variableHookObject[controllerName] as T,
         setState: (value: T) => {
-            if (variableEditedList[controllerName] && !variableEditedList[controllerName].includes(label)) {
-                variableEditedList[controllerName].push(label);
+            if (variableEditedObject[controllerName] && !variableEditedObject[controllerName].includes(label)) {
+                variableEditedObject[controllerName].push(label);
             }
 
             variableHookObject[controllerName] = variableProxy(label, value, controllerName);
@@ -529,15 +529,15 @@ export const variableBind = <T extends Record<string, unknown>>(
     inputObject: TvariableBindInput<T>,
     controllerName: string
 ): { [A in keyof T]: IvariableBind<T[A]> } => {
-    const result = {} as { [A in keyof T]: IvariableBind<T[A]> };
+    const resultObject = {} as { [A in keyof T]: IvariableBind<T[A]> };
 
-    if (!variableLoadedList[controllerName]) {
-        variableLoadedList[controllerName] = [];
-        variableEditedList[controllerName] = [];
+    if (!variableLoadedObject[controllerName]) {
+        variableLoadedObject[controllerName] = [];
+        variableEditedObject[controllerName] = [];
     }
 
-    if (!variableBindRegistry[controllerName]) {
-        variableBindRegistry[controllerName] = {};
+    if (!variableBindRegistryObject[controllerName]) {
+        variableBindRegistryObject[controllerName] = {};
     }
 
     const keyList = Object.keys(inputObject) as (keyof T)[];
@@ -546,17 +546,17 @@ export const variableBind = <T extends Record<string, unknown>>(
         const keyTyped = keyList[a];
         const key = String(keyTyped);
 
-        if (variableLoadedList[controllerName].includes(key)) {
+        if (variableLoadedObject[controllerName].includes(key)) {
             throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableBind() => The method variableBind use existing label "${key}"!`);
         }
 
-        variableLoadedList[controllerName].push(key);
+        variableLoadedObject[controllerName].push(key);
 
         const target = inputObject[keyTyped];
         let initialValue: unknown = target;
 
         if (variableLinkReference(target)) {
-            const sourceControllerObject = variableBindRegistry[target.controllerNameSource];
+            const sourceControllerObject = variableBindRegistryObject[target.controllerNameSource];
             const sourceBind = sourceControllerObject ? sourceControllerObject[key] : null;
 
             initialValue = sourceBind ? variableLinkClone(sourceBind.state) : undefined;
@@ -564,9 +564,9 @@ export const variableBind = <T extends Record<string, unknown>>(
 
         const bindItem = variableBindItem(key, initialValue as T[typeof keyTyped], controllerName);
 
-        result[keyTyped] = bindItem;
+        resultObject[keyTyped] = bindItem;
 
-        variableBindRegistry[controllerName][key] = bindItem as IvariableBind<unknown>;
+        variableBindRegistryObject[controllerName][key] = bindItem as IvariableBind<unknown>;
     }
 
     for (let a = 0; a < keyList.length; a++) {
@@ -578,7 +578,7 @@ export const variableBind = <T extends Record<string, unknown>>(
             continue;
         }
 
-        const targetBind = result[keyTyped] as IvariableBind<unknown>;
+        const targetBind = resultObject[keyTyped] as IvariableBind<unknown>;
 
         const isResolved = variableLinkResolve(target, key, targetBind);
 
@@ -593,7 +593,7 @@ export const variableBind = <T extends Record<string, unknown>>(
 
     variableLinkPendingFlush();
 
-    return result;
+    return resultObject;
 };
 
 export const variableLink = <T>(controllerNameSource: string): IvariableLink<T> => {
@@ -669,22 +669,22 @@ export const frameworkReset = (): void => {
         delete renderTriggerObject[renderTriggerKeyList[a]];
     }
 
-    const variableBindKeyList = Object.keys(variableBindRegistry);
+    const variableBindKeyList = Object.keys(variableBindRegistryObject);
 
     for (let a = 0; a < variableBindKeyList.length; a++) {
-        delete variableBindRegistry[variableBindKeyList[a]];
+        delete variableBindRegistryObject[variableBindKeyList[a]];
     }
 
-    const variableLoadedKeyList = Object.keys(variableLoadedList);
+    const variableLoadedKeyList = Object.keys(variableLoadedObject);
 
     for (let a = 0; a < variableLoadedKeyList.length; a++) {
-        delete variableLoadedList[variableLoadedKeyList[a]];
+        delete variableLoadedObject[variableLoadedKeyList[a]];
     }
 
-    const variableEditedKeyList = Object.keys(variableEditedList);
+    const variableEditedKeyList = Object.keys(variableEditedObject);
 
     for (let a = 0; a < variableEditedKeyList.length; a++) {
-        delete variableEditedList[variableEditedKeyList[a]];
+        delete variableEditedObject[variableEditedKeyList[a]];
     }
 
     const variableRenderUpdateKeyList = Object.keys(variableRenderUpdateObject);

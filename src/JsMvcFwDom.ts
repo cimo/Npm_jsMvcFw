@@ -111,31 +111,31 @@ const applyProperty = (element: Element, key: string, valueNew: TvirtualNodeProp
     }
 };
 
-const updateProperty = (element: Element, oldList: Record<string, TvirtualNodeProperty>, newList: Record<string, TvirtualNodeProperty>): void => {
-    const oldKeyList = Object.keys(oldList);
+const updateProperty = (element: Element, oldObject: Record<string, TvirtualNodeProperty>, newObject: Record<string, TvirtualNodeProperty>): void => {
+    const oldKeyList = Object.keys(oldObject);
 
     for (let a = 0; a < oldKeyList.length; a++) {
         const key = oldKeyList[a];
 
-        if (!(key in newList)) {
+        if (!(key in newObject)) {
             if (key === "jsmvcfw-html") {
                 element.innerHTML = "";
-            } else if (key.startsWith("on") && typeof oldList[key] === "function") {
-                element.removeEventListener(key.slice(2).toLowerCase(), oldList[key]);
+            } else if (key.startsWith("on") && typeof oldObject[key] === "function") {
+                element.removeEventListener(key.slice(2).toLowerCase(), oldObject[key]);
             } else {
                 element.removeAttribute(key);
             }
         }
     }
 
-    const entryList = Object.entries(newList);
+    const entryList = Object.entries(newObject);
 
     for (let a = 0; a < entryList.length; a++) {
         const entry = entryList[a];
         const key = entry[0];
         const value = entry[1];
 
-        const valueOld = oldList[key];
+        const valueOld = oldObject[key];
 
         if (value !== valueOld) {
             applyProperty(element, key, value, valueOld);
@@ -146,7 +146,7 @@ const updateProperty = (element: Element, oldList: Record<string, TvirtualNodePr
 const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childrenList"], nodeNewListValue: IvirtualNode["childrenList"]): void => {
     const nodeOldList = Array.isArray(nodeOldListValue) ? nodeOldListValue : [];
     const nodeNewList = Array.isArray(nodeNewListValue) ? nodeNewListValue : [];
-    const keyOldObject: Record<string, { node: IvirtualNode; dom: Element }> = {};
+    const keyOldObject = {} as Record<string, { node: IvirtualNode; dom: Element }>;
 
     for (let a = 0; a < nodeOldList.length; a++) {
         const node = nodeOldList[a];

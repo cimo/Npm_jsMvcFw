@@ -1,6 +1,20 @@
+export type TvirtualNodeProperty = string | number | boolean | (string | IvirtualNode)[] | ((event: Event) => void) | null | undefined;
+
+export type TvirtualNodeChildren = IvirtualNode | string | number;
+
+export type TvariableBindInput<T extends Record<string, unknown>> = {
+    [A in keyof T]: T[A] | IvariableLink<T[A]>;
+};
+
+export type Temitter = {
+    variableChanged: void;
+};
+
 export interface IvirtualNode {
     tag: string;
-    propertyObject: { [key: string]: TvirtualNodeProperty };
+    propertyObject: {
+        [key: string]: TvirtualNodeProperty;
+    };
     childrenList: Array<IvirtualNode | string>;
     key?: string;
 }
@@ -28,7 +42,12 @@ export interface IvariableLinkPending {
 }
 
 export interface IvariableEffect {
-    (groupObject: { list: string[]; action: () => void }[]): void;
+    (
+        groupList: {
+            variableList: string[];
+            action: () => void;
+        }[]
+    ): void;
 }
 
 export interface Icontroller {
@@ -55,17 +74,12 @@ export interface IhistoryPushStateData {
 }
 
 export interface IcallbackObserver {
-    (el: HTMLElement, mutation: MutationRecord): void;
+    (element: HTMLElement, mutation: MutationRecord): void;
 }
 
-export type TvirtualNodeProperty = string | number | boolean | (string | IvirtualNode)[] | ((event: Event) => void) | null | undefined;
-
-export type TvirtualNodeChildren = IvirtualNode | string | number;
-
-export type TvariableBindInput<T extends Record<string, unknown>> = {
-    [A in keyof T]: T[A] | IvariableLink<T[A]>;
-};
-
-export type Temitter = {
-    variableChanged: void;
-};
+export interface IvirtualNodeTag {
+    [key: string]: {
+        node: IvirtualNode;
+        isFromArray: boolean;
+    }[];
+}

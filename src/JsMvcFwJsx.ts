@@ -1,5 +1,5 @@
 // Source
-import { IvirtualNode, TvirtualNodeChildren } from "./JsMvcFwInterface.js";
+import { IvirtualNode, TvirtualNodeChildren, IvirtualNodeTag } from "./JsMvcFwInterface.js";
 
 const stackErrorDetail = (): string => {
     const stack = new Error().stack;
@@ -31,7 +31,7 @@ const checkDynamicElement = (childrenListValue: TvirtualNodeChildren[]): void =>
     }
 
     if (isDynamic) {
-        const tagObject: Record<string, { node: IvirtualNode; isFromArray: boolean }[]> = {};
+        const tagObject = {} as IvirtualNodeTag;
 
         for (let a = 0; a < childrenListValue.length; a++) {
             const childEntry = childrenListValue[a];
@@ -116,7 +116,7 @@ const flattenChildren = (input: unknown, out: Array<IvirtualNode | string>): voi
 };
 
 export const jsxFactory = (
-    tag: string | ((props: { children: Array<IvirtualNode | string> }) => Array<IvirtualNode | string>),
+    tag: string | ((props: { childrenList: Array<IvirtualNode | string> }) => Array<IvirtualNode | string>),
     propertyObjectValue: IvirtualNode["propertyObject"] = {},
     ...childrenListValue: TvirtualNodeChildren[]
 ): IvirtualNode | Array<IvirtualNode | string> => {
@@ -131,7 +131,7 @@ export const jsxFactory = (
     const { key, ...propertyObject } = propertyObjectValue || {};
 
     if (typeof tag === "function") {
-        return tag({ children: childrenList });
+        return tag({ childrenList: childrenList });
     }
 
     return {
@@ -142,4 +142,4 @@ export const jsxFactory = (
     };
 };
 
-export const jsxFragment = ({ children }: { children: Array<IvirtualNode | string> }) => children;
+export const jsxFragment = ({ childrenList }: { childrenList: Array<IvirtualNode | string> }) => childrenList;
