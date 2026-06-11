@@ -231,7 +231,7 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
             continue;
         }
 
-        hookObjectMerged[key] = valueConnectedList.length === 1 ? valueConnectedList[0] : valueConnectedList;
+        hookObjectMerged[key] = Array.isArray(value) ? valueConnectedList : valueConnectedList.length === 1 ? valueConnectedList[0] : valueConnectedList;
     }
 
     controllerValue.hookObject = hookObjectMerged;
