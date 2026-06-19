@@ -231,7 +231,11 @@ const elementHook = (elementContainer: Element, controllerValue: Icontroller): v
             continue;
         }
 
-        hookObjectMerged[key] = Array.isArray(value) ? valueConnectedList : valueConnectedList.length === 1 ? valueConnectedList[0] : valueConnectedList;
+        hookObjectMerged[key] = Array.isArray(value)
+            ? valueConnectedList
+            : valueConnectedList.length === 1
+              ? valueConnectedList[0]
+              : valueConnectedList;
     }
 
     controllerValue.hookObject = hookObjectMerged;
@@ -352,6 +356,23 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
     controllerValue.variable();
 
+    const renderSubControllerList = (): void => {
+        if (!controllerValue.subControllerList) {
+            return;
+        }
+
+        const subControllerList = controllerValue.subControllerList();
+
+        for (let a = 0; a < subControllerList.length; a++) {
+            const subController = subControllerList[a];
+            const renderSubTrigger = renderTriggerObject[subController.constructor.name];
+
+            if (renderSubTrigger) {
+                renderSubTrigger();
+            }
+        }
+    };
+
     const renderTrigger = (): void => {
         if (!controllerParent) {
             let virtualNodeNew = controllerValue.view();
@@ -381,35 +402,68 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
                 const elementFirstChild = elementRoot.firstElementChild;
                 if (elementFirstChild) {
                     updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
+                } else {
+                    const elementVirtualNode = createVirtualNode(virtualNodeNew);
+                    elementRoot.innerHTML = "";
+                    elementRoot.appendChild(elementVirtualNode);
                 }
             }
 
             virtualNodeObject[controllerName] = virtualNodeNew;
             elementHook(elementRoot, controllerValue);
+            renderSubControllerList();
 
             return;
         }
 
-        const parentContainer = document.querySelector(`[jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
+        const parentContainerList = document.querySelectorAll(`[jsmvcfw-controllerName="${controllerParent.constructor.name}"]`);
 
-        if (!parentContainer) {
+        if (!parentContainerList.length) {
             throw new Error(
                 `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerParent.constructor.name}" not found!`
             );
         }
 
-        const elementContainerList = parentContainer.querySelectorAll(`[jsmvcfw-controllerName="${controllerName}"]`);
+        const elementContainerList: Array<{
+            elementContainer: Element;
+            parentIndex: number;
+            parentViewName: string | undefined;
+        }> = [];
+
+        for (let parentIndex = 0; parentIndex < parentContainerList.length; parentIndex++) {
+            const parentContainer = parentContainerList[parentIndex];
+            const parentViewAttribute = parentContainer.getAttribute("view");
+            const parentViewName = parentViewAttribute && parentViewAttribute.trim() !== "" ? parentViewAttribute.trim() : undefined;
+
+            const childContainerNodeList = parentContainer.querySelectorAll(`[jsmvcfw-controllerName="${controllerName}"]`);
+
+            for (let childIndex = 0; childIndex < childContainerNodeList.length; childIndex++) {
+                const elementContainer = childContainerNodeList[childIndex];
+                const parentViewFilterAttribute = elementContainer.getAttribute("jsmvcfw-parentView");
+                const parentViewFilter =
+                    parentViewFilterAttribute && parentViewFilterAttribute.trim() !== "" ? parentViewFilterAttribute.trim() : undefined;
+
+                if (parentViewFilter && parentViewFilter !== parentViewName) {
+                    continue;
+                }
+
+                elementContainerList.push({
+                    elementContainer,
+                    parentIndex,
+                    parentViewName
+                });
+            }
+        }
 
         if (!elementContainerList.length) {
-            throw new Error(
-                `@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Tag jsmvcfw-controllerName="${controllerName}" not found inside jsmvcfw-controllerName="${controllerParent.constructor.name}"!`
-            );
+            return;
         }
 
         let isFirstRenderAtLeastOne = false;
 
         for (let a = 0; a < elementContainerList.length; a++) {
-            const viewAttribute = elementContainerList[a].getAttribute("view");
+            const { elementContainer, parentIndex, parentViewName } = elementContainerList[a];
+            const viewAttribute = elementContainer.getAttribute("view");
             const viewName = viewAttribute && viewAttribute.trim() !== "" ? viewAttribute.trim() : undefined;
 
             let virtualNodeNew = controllerValue.view(viewName);
@@ -419,31 +473,37 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
                 throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - renderTrigger() => Invalid virtual node returned by controller "${controllerName}"!`);
             }
 
-            const slotKey = `${controllerName}::${viewName || "__default__"}::${a}`;
+            const slotKey = `${controllerName}::parent-${parentIndex}::${parentViewName || "__defaultParent__"}::${viewName || "__default__"}::${a}`;
             const virtualNodeOld = virtualNodeObject[slotKey];
 
             if (!virtualNodeOld) {
                 const elementVirtualNode = createVirtualNode(virtualNodeNew);
-                elementContainerList[a].innerHTML = "";
-                elementContainerList[a].appendChild(elementVirtualNode);
+                elementContainer.innerHTML = "";
+                elementContainer.appendChild(elementVirtualNode);
 
                 isFirstRenderAtLeastOne = true;
             } else {
-                const elementFirstChild = elementContainerList[a].firstElementChild;
+                const elementFirstChild = elementContainer.firstElementChild;
 
                 if (elementFirstChild) {
                     updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
+                } else {
+                    const elementVirtualNode = createVirtualNode(virtualNodeNew);
+                    elementContainer.innerHTML = "";
+                    elementContainer.appendChild(elementVirtualNode);
                 }
             }
 
             virtualNodeObject[slotKey] = virtualNodeNew;
 
-            elementHook(elementContainerList[a] as HTMLElement, controllerValue);
+            elementHook(elementContainer, controllerValue);
         }
 
         if (isFirstRenderAtLeastOne && callback) {
             callback();
         }
+
+        renderSubControllerList();
     };
 
     renderTriggerObject[controllerName] = renderTrigger;
