@@ -146,6 +146,36 @@ const updateProperty = (element: Element, oldObject: Record<string, TvirtualNode
 const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childrenList"], nodeNewListValue: IvirtualNode["childrenList"]): void => {
     const nodeOldList = Array.isArray(nodeOldListValue) ? nodeOldListValue : [];
     const nodeNewList = Array.isArray(nodeNewListValue) ? nodeNewListValue : [];
+    const controllerNameNewObject = {} as Record<string, boolean>;
+
+    for (let a = 0; a < nodeNewList.length; a++) {
+        const node = nodeNewList[a];
+
+        if (typeof node === "object" && node.propertyObject) {
+            const controllerName = node.propertyObject["jsmvcfw-controllerName"];
+
+            if (typeof controllerName === "string") {
+                controllerNameNewObject[controllerName] = true;
+            }
+        }
+    }
+
+    const isControllerNameRemovable = (nodeDom: Node): boolean => {
+        if (nodeDom.nodeType !== Node.ELEMENT_NODE) {
+            return true;
+        }
+
+        const elementDom = nodeDom as Element;
+
+        if (!elementDom.hasAttribute("jsmvcfw-controllername")) {
+            return true;
+        }
+
+        const controllerName = elementDom.getAttribute("jsmvcfw-controllername");
+
+        return !controllerName || !controllerNameNewObject[controllerName];
+    };
+
     const keyOldObject = {} as Record<string, { node: IvirtualNode; dom: Element }>;
 
     for (let a = 0; a < nodeOldList.length; a++) {
@@ -164,9 +194,7 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
         const nodeDom = element.childNodes[a];
 
         if (!nodeNew && nodeDom) {
-            const isControllerName = nodeDom.nodeType === Node.ELEMENT_NODE && (nodeDom as Element).hasAttribute("jsmvcfw-controllername");
-
-            if (!isControllerName) {
+            if (isControllerNameRemovable(nodeDom)) {
                 element.removeChild(nodeDom);
             }
 
@@ -216,9 +244,8 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
 
     while (element.childNodes.length > nodeNewList.length) {
         const nodeExtra = element.childNodes[nodeNewList.length];
-        const isControllerName = nodeExtra.nodeType === Node.ELEMENT_NODE && (nodeExtra as Element).hasAttribute("jsmvcfw-controllername");
 
-        if (!isControllerName) {
+        if (isControllerNameRemovable(nodeExtra)) {
             element.removeChild(nodeExtra);
         } else {
             break;

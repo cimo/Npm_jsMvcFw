@@ -365,9 +365,25 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
         for (let a = 0; a < subControllerList.length; a++) {
             const subController = subControllerList[a];
-            const renderSubTrigger = renderTriggerObject[subController.constructor.name];
+            const subControllerName = subController.constructor.name;
+            const renderSubTrigger = renderTriggerObject[subControllerName];
 
-            if (renderSubTrigger) {
+            if (!renderSubTrigger) {
+                continue;
+            }
+
+            const subContainerList = document.querySelectorAll(`[jsmvcfw-controllerName="${subControllerName}"]`);
+            let isRefillNeeded = false;
+
+            for (let b = 0; b < subContainerList.length; b++) {
+                if (!subContainerList[b].firstElementChild) {
+                    isRefillNeeded = true;
+
+                    break;
+                }
+            }
+
+            if (isRefillNeeded) {
                 renderSubTrigger();
             }
         }
@@ -456,6 +472,15 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
         }
 
         if (!elementContainerList.length) {
+            const slotPrefix = `${controllerName}::`;
+            const slotKeyList = Object.keys(virtualNodeObject);
+
+            for (let a = 0; a < slotKeyList.length; a++) {
+                if (slotKeyList[a].indexOf(slotPrefix) === 0) {
+                    delete virtualNodeObject[slotKeyList[a]];
+                }
+            }
+
             return;
         }
 
