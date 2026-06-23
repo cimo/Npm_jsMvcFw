@@ -1,6 +1,14 @@
-export type TvirtualNodeProperty = string | number | boolean | (string | IvirtualNode)[] | ((event: Event) => void) | null | undefined;
+export type TvirtualNodeProperty =
+    | string
+    | number
+    | boolean
+    | (string | IvirtualNode)[]
+    | ((event: Event) => void)
+    | (() => unknown)
+    | null
+    | undefined;
 
-export type TvirtualNodeChildren = IvirtualNode | string | number;
+export type TvirtualNodeChildren = IvirtualNode | string | number | (() => unknown);
 
 export type TvariableBindInput<T extends Record<string, unknown>> = {
     [A in keyof T]: T[A] | IvariableLink<T[A]>;
@@ -15,7 +23,7 @@ export interface IvirtualNode {
     propertyObject: {
         [key: string]: TvirtualNodeProperty;
     };
-    childrenList: Array<IvirtualNode | string>;
+    childrenList: Array<IvirtualNode | string | (() => unknown)>;
     key?: string;
 }
 

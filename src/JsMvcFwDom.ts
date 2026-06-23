@@ -1,6 +1,343 @@
 // Source
 import { TvirtualNodeProperty, IvirtualNode } from "./JsMvcFwInterface.js";
 
+interface Ibinding {
+    node: Node;
+    apply: () => void;
+    keyList: string[];
+    childList: Ibinding[];
+    isDisposed: boolean;
+    nodeList: Node[];
+    anchor?: Node;
+    thunk?: () => unknown;
+    isRegion?: boolean;
+}
+
+let bindingActive: Ibinding | null = null;
+const bindingSubscriberObject = {} as Record<string, Ibinding[]>;
+const bindingFlushSet = new Set<string>();
+let isBindingFlushScheduled = false;
+let bindingFlushCallback: (() => void) | null = null;
+
+export const bindingSetFlushCallback = (callback: () => void): void => {
+    bindingFlushCallback = callback;
+};
+
+export const bindingTrack = (key: string): void => {
+    if (!bindingActive) {
+        return;
+    }
+
+    let bindingList = bindingSubscriberObject[key];
+
+    if (!bindingList) {
+        bindingList = [];
+        bindingSubscriberObject[key] = bindingList;
+    }
+
+    if (bindingList.indexOf(bindingActive) === -1) {
+        bindingList.push(bindingActive);
+        bindingActive.keyList.push(key);
+    }
+};
+
+const bindingUnsubscribe = (binding: Ibinding): void => {
+    for (let a = 0; a < binding.keyList.length; a++) {
+        const bindingList = bindingSubscriberObject[binding.keyList[a]];
+
+        if (bindingList) {
+            const index = bindingList.indexOf(binding);
+
+            if (index !== -1) {
+                bindingList.splice(index, 1);
+            }
+        }
+    }
+
+    binding.keyList = [];
+};
+
+const bindingDisposeChildren = (binding: Ibinding): void => {
+    for (let a = 0; a < binding.childList.length; a++) {
+        bindingDispose(binding.childList[a]);
+    }
+
+    binding.childList = [];
+};
+
+const bindingDispose = (binding: Ibinding): void => {
+    if (binding.isDisposed) {
+        return;
+    }
+
+    binding.isDisposed = true;
+    bindingUnsubscribe(binding);
+    bindingDisposeChildren(binding);
+};
+
+const bindingRun = (binding: Ibinding): void => {
+    if (binding.isDisposed) {
+        return;
+    }
+
+    bindingUnsubscribe(binding);
+    bindingDisposeChildren(binding);
+
+    const bindingPrevious = bindingActive;
+    bindingActive = binding;
+
+    binding.apply();
+
+    bindingActive = bindingPrevious;
+};
+
+const bindingCreate = (node: Node, apply: () => void): Ibinding => {
+    const binding: Ibinding = { node, apply, keyList: [], childList: [], isDisposed: false, nodeList: [] };
+
+    if (bindingActive) {
+        bindingActive.childList.push(binding);
+    }
+
+    bindingRun(binding);
+
+    return binding;
+};
+
+const regionFlatten = (input: unknown, out: Array<IvirtualNode | string | (() => unknown)>): void => {
+    if (input === null || input === undefined || input === false || input === true) {
+        return;
+    }
+
+    if (Array.isArray(input)) {
+        for (let a = 0; a < input.length; a++) {
+            regionFlatten(input[a], out);
+        }
+
+        return;
+    }
+
+    if (typeof input === "number") {
+        out.push(String(input));
+
+        return;
+    }
+
+    if (typeof input === "string") {
+        out.push(input);
+
+        return;
+    }
+
+    if (typeof input === "function") {
+        out.push(input as () => unknown);
+
+        return;
+    }
+
+    if (typeof input === "object" && "tag" in input) {
+        out.push(input as IvirtualNode);
+    }
+};
+
+const regionApply = (binding: Ibinding): void => {
+    if (!binding.anchor || !binding.thunk) {
+        return;
+    }
+
+    const parent = binding.anchor.parentNode;
+
+    if (!parent) {
+        return;
+    }
+
+    const vnodeListNew: Array<IvirtualNode | string | (() => unknown)> = [];
+    regionFlatten(binding.thunk(), vnodeListNew);
+
+    const isTextFast =
+        vnodeListNew.length === 1 &&
+        typeof vnodeListNew[0] === "string" &&
+        binding.nodeList.length === 1 &&
+        binding.nodeList[0].nodeType === Node.TEXT_NODE;
+
+    if (isTextFast) {
+        if (binding.nodeList[0].textContent !== vnodeListNew[0]) {
+            binding.nodeList[0].textContent = vnodeListNew[0] as string;
+        }
+
+        return;
+    }
+
+    for (let a = 0; a < binding.nodeList.length; a++) {
+        const node = binding.nodeList[a];
+
+        if (node.parentNode) {
+            node.parentNode.removeChild(node);
+        }
+    }
+
+    binding.nodeList = [];
+
+    const reference = binding.anchor.nextSibling;
+
+    for (let a = 0; a < vnodeListNew.length; a++) {
+        const vnode = vnodeListNew[a];
+
+        if (typeof vnode === "function") {
+            const anchorChild = document.createComment("");
+            parent.insertBefore(anchorChild, reference);
+            binding.nodeList.push(anchorChild);
+
+            const bindingChild: Ibinding = {
+                node: anchorChild,
+                anchor: anchorChild,
+                thunk: vnode,
+                nodeList: [],
+                keyList: [],
+                childList: [],
+                isDisposed: false,
+                isRegion: true,
+                apply: () => undefined
+            };
+            bindingChild.apply = () => regionApply(bindingChild);
+            binding.childList.push(bindingChild);
+            bindingRun(bindingChild);
+
+            for (let b = 0; b < bindingChild.nodeList.length; b++) {
+                binding.nodeList.push(bindingChild.nodeList[b]);
+            }
+
+            continue;
+        }
+
+        let domNode: Node;
+
+        if (typeof vnode === "string") {
+            domNode = document.createTextNode(vnode);
+        } else {
+            domNode = createVirtualNode(vnode);
+        }
+
+        parent.insertBefore(domNode, reference);
+        binding.nodeList.push(domNode);
+    }
+};
+
+const bindingCreateRegion = (parentElement: Element, thunk: () => unknown): Ibinding => {
+    const anchor = document.createComment("");
+    parentElement.appendChild(anchor);
+
+    const binding: Ibinding = {
+        node: anchor,
+        anchor,
+        thunk,
+        nodeList: [],
+        keyList: [],
+        childList: [],
+        isDisposed: false,
+        isRegion: true,
+        apply: () => undefined
+    };
+    binding.apply = () => regionApply(binding);
+
+    if (bindingActive) {
+        bindingActive.childList.push(binding);
+    }
+
+    bindingRun(binding);
+
+    return binding;
+};
+
+const bindingFlush = (): void => {
+    isBindingFlushScheduled = false;
+
+    const keyList = [...bindingFlushSet];
+    bindingFlushSet.clear();
+
+    const runList: Ibinding[] = [];
+
+    for (let a = 0; a < keyList.length; a++) {
+        const bindingList = bindingSubscriberObject[keyList[a]];
+
+        if (!bindingList) {
+            continue;
+        }
+
+        const bindingListCopy = [...bindingList];
+
+        for (let b = 0; b < bindingListCopy.length; b++) {
+            const binding = bindingListCopy[b];
+
+            if (runList.indexOf(binding) === -1) {
+                runList.push(binding);
+            }
+        }
+    }
+
+    for (let a = 0; a < runList.length; a++) {
+        const binding = runList[a];
+
+        if (binding.isDisposed) {
+            continue;
+        }
+
+        if (binding.node && !binding.node.isConnected) {
+            bindingDispose(binding);
+
+            continue;
+        }
+
+        bindingRun(binding);
+    }
+
+    if (bindingFlushCallback) {
+        bindingFlushCallback();
+    }
+};
+
+export const bindingNotify = (key: string): boolean => {
+    const bindingList = bindingSubscriberObject[key];
+
+    if (!bindingList || bindingList.length === 0) {
+        return false;
+    }
+
+    bindingFlushSet.add(key);
+
+    if (!isBindingFlushScheduled) {
+        isBindingFlushScheduled = true;
+
+        Promise.resolve().then(bindingFlush);
+    }
+
+    return true;
+};
+
+export const bindingHasController = (controllerName: string): boolean => {
+    const prefix = `${controllerName}::`;
+    const keyList = Object.keys(bindingSubscriberObject);
+
+    for (let a = 0; a < keyList.length; a++) {
+        if (keyList[a].indexOf(prefix) === 0 && bindingSubscriberObject[keyList[a]].length > 0) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+export const bindingReset = (): void => {
+    const keyList = Object.keys(bindingSubscriberObject);
+
+    for (let a = 0; a < keyList.length; a++) {
+        delete bindingSubscriberObject[keyList[a]];
+    }
+
+    bindingFlushSet.clear();
+    isBindingFlushScheduled = false;
+    bindingActive = null;
+};
+
 const safeHtml = (html: string): string => {
     const template = document.createElement("template");
     template.innerHTML = html;
@@ -201,6 +538,10 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
             continue;
         }
 
+        if (typeof nodeNew === "function") {
+            continue;
+        }
+
         if (typeof nodeNew === "string") {
             if (!nodeDom) {
                 element.appendChild(document.createTextNode(nodeNew));
@@ -261,14 +602,22 @@ export const createVirtualNode = (node: IvirtualNode): HTMLElement => {
     for (let a = 0; a < entryList.length; a++) {
         const [key, value] = entryList[a];
 
-        applyProperty(element, key, value);
+        if (typeof value === "function" && !key.startsWith("on")) {
+            bindingCreate(element, () => {
+                applyProperty(element, key, (value as () => TvirtualNodeProperty)());
+            });
+        } else {
+            applyProperty(element, key, value);
+        }
     }
 
     if (Array.isArray(node.childrenList)) {
         for (let a = 0; a < node.childrenList.length; a++) {
             const child = node.childrenList[a];
 
-            if (typeof child === "string") {
+            if (typeof child === "function") {
+                bindingCreateRegion(element, child);
+            } else if (typeof child === "string") {
                 element.appendChild(document.createTextNode(child));
             } else {
                 element.appendChild(createVirtualNode(child));

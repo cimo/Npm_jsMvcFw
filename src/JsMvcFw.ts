@@ -11,7 +11,15 @@ import {
     TvariableBindInput,
     Temitter
 } from "./JsMvcFwInterface.js";
-import { createVirtualNode, updateVirtualNode } from "./JsMvcFwDom.js";
+import {
+    createVirtualNode,
+    updateVirtualNode,
+    bindingTrack,
+    bindingNotify,
+    bindingReset,
+    bindingHasController,
+    bindingSetFlushCallback
+} from "./JsMvcFwDom.js";
 import Emitter from "./JsMvcFwEmitter.js";
 
 let urlRoot: string = "";
@@ -48,6 +56,73 @@ const variableRenderUpdate = (controllerName: string): void => {
     }
 };
 
+const variableChange = (controllerName: string, label: string): void => {
+    if (variableEditedObject[controllerName] && !variableEditedObject[controllerName].includes(label)) {
+        variableEditedObject[controllerName].push(label);
+    }
+
+    const isFineGrained = bindingNotify(`${controllerName}::${label}`);
+
+    if (isFineGrained || bindingHasController(controllerName)) {
+        if (emitterObject[controllerName] && !variableRenderUpdateObject[controllerName]) {
+            variableRenderUpdateObject[controllerName] = true;
+
+            Promise.resolve().then(() => {
+                emitterObject[controllerName].emit("variableChanged");
+
+                variableRenderUpdateObject[controllerName] = false;
+            });
+        }
+    } else {
+        variableRenderUpdate(controllerName);
+    }
+};
+
+const subControllerRefill = (): void => {
+    const controllerNameList = Object.keys(renderTriggerObject);
+
+    for (let a = 0; a < controllerNameList.length; a++) {
+        const controllerName = controllerNameList[a];
+        const containerList = document.querySelectorAll(`[jsmvcfw-controllerName="${controllerName}"]`);
+
+        let isRefillNeeded = false;
+
+        for (let b = 0; b < containerList.length; b++) {
+            if (!containerList[b].firstElementChild) {
+                isRefillNeeded = true;
+
+                break;
+            }
+        }
+
+        if (isRefillNeeded) {
+            renderTriggerObject[controllerName]();
+        }
+    }
+};
+
+const elementHookRefresh = (): void => {
+    for (let a = 0; a < controllerList.length; a++) {
+        const controllerAll = [controllerList[a].parent, ...controllerList[a].childrenList];
+
+        for (let b = 0; b < controllerAll.length; b++) {
+            const controllerValue = controllerAll[b];
+            const containerList = document.querySelectorAll(`[jsmvcfw-controllerName="${controllerValue.constructor.name}"]`);
+
+            for (let c = 0; c < containerList.length; c++) {
+                elementHook(containerList[c], controllerValue);
+            }
+        }
+    }
+};
+
+const bindingAfterFlush = (): void => {
+    subControllerRefill();
+    elementHookRefresh();
+};
+
+bindingSetFlushCallback(bindingAfterFlush);
+
 const variableProxy = <T>(stateLabel: string, stateValue: T, controllerName: string): T => {
     if (typeof stateValue !== "object" || stateValue === null) {
         return stateValue;
@@ -70,27 +145,19 @@ const variableProxy = <T>(stateLabel: string, stateValue: T, controllerName: str
             return result;
         },
         set(target, property, newValue, receiver) {
-            if (variableEditedObject[controllerName] && !variableEditedObject[controllerName].includes(stateLabel)) {
-                variableEditedObject[controllerName].push(stateLabel);
-            }
-
             const isSuccess = Reflect.set(target, property, newValue, receiver);
 
             if (isSuccess) {
-                variableRenderUpdate(controllerName);
+                variableChange(controllerName, stateLabel);
             }
 
             return isSuccess;
         },
         deleteProperty(target, property) {
-            if (variableEditedObject[controllerName] && !variableEditedObject[controllerName].includes(stateLabel)) {
-                variableEditedObject[controllerName].push(stateLabel);
-            }
-
             const isSuccess = Reflect.deleteProperty(target, property);
 
             if (isSuccess) {
-                variableRenderUpdate(controllerName);
+                variableChange(controllerName, stateLabel);
             }
 
             return isSuccess;
@@ -108,11 +175,13 @@ const variableBindItem = <T>(label: string, stateValue: T, controllerName: strin
 
     return {
         get state(): T {
+            bindingTrack(`${controllerName}::${label}`);
+
             return _state;
         },
         set state(value: T) {
-            if (variableEditedObject[controllerName] && !variableEditedObject[controllerName].includes(label)) {
-                variableEditedObject[controllerName].push(label);
+            if (Object.is(_state, value)) {
+                return;
             }
 
             _state = variableProxy(label, value, controllerName);
@@ -123,7 +192,7 @@ const variableBindItem = <T>(label: string, stateValue: T, controllerName: strin
                 listener(_state);
             }
 
-            variableRenderUpdate(controllerName);
+            variableChange(controllerName, label);
         },
         listener(callback: (value: T) => void): void {
             _listenerList.push(callback);
@@ -417,7 +486,9 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
             } else {
                 const elementFirstChild = elementRoot.firstElementChild;
                 if (elementFirstChild) {
-                    updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
+                    if (!bindingHasController(controllerName)) {
+                        updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
+                    }
                 } else {
                     const elementVirtualNode = createVirtualNode(virtualNodeNew);
                     elementRoot.innerHTML = "";
@@ -511,7 +582,9 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
                 const elementFirstChild = elementContainer.firstElementChild;
 
                 if (elementFirstChild) {
-                    updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
+                    if (!bindingHasController(controllerName)) {
+                        updateVirtualNode(elementFirstChild, virtualNodeOld, virtualNodeNew);
+                    }
                 } else {
                     const elementVirtualNode = createVirtualNode(virtualNodeNew);
                     elementContainer.innerHTML = "";
@@ -796,4 +869,5 @@ export const frameworkReset = (): void => {
 
     observerWeakMap = new WeakMap();
     callbackObserverWeakMap = new WeakMap();
+    bindingReset();
 };

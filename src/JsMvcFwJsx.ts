@@ -87,8 +87,14 @@ const checkDynamicElement = (childrenListValue: TvirtualNodeChildren[]): void =>
     }
 };
 
-const flattenChildren = (input: unknown, out: Array<IvirtualNode | string>): void => {
+const flattenChildren = (input: unknown, out: Array<IvirtualNode | string | (() => unknown)>): void => {
     if (input == null) {
+        return;
+    }
+
+    if (typeof input === "function") {
+        out.push(input as () => unknown);
+
         return;
     }
 
@@ -116,11 +122,11 @@ const flattenChildren = (input: unknown, out: Array<IvirtualNode | string>): voi
 };
 
 export const jsxFactory = (
-    tag: string | ((props: { childrenList: Array<IvirtualNode | string> }) => Array<IvirtualNode | string>),
+    tag: string | ((props: { childrenList: Array<IvirtualNode | string | (() => unknown)> }) => Array<IvirtualNode | string | (() => unknown)>),
     propertyObjectValue: IvirtualNode["propertyObject"] = {},
     ...childrenListValue: TvirtualNodeChildren[]
-): IvirtualNode | Array<IvirtualNode | string> => {
-    const childrenList: Array<IvirtualNode | string> = [];
+): IvirtualNode | Array<IvirtualNode | string | (() => unknown)> => {
+    const childrenList: Array<IvirtualNode | string | (() => unknown)> = [];
 
     for (let a = 0; a < childrenListValue.length; a++) {
         flattenChildren(childrenListValue[a], childrenList);
@@ -142,4 +148,4 @@ export const jsxFactory = (
     };
 };
 
-export const jsxFragment = ({ childrenList }: { childrenList: Array<IvirtualNode | string> }) => childrenList;
+export const jsxFragment = ({ childrenList }: { childrenList: Array<IvirtualNode | string | (() => unknown)> }) => childrenList;
