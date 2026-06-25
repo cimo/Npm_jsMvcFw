@@ -11,16 +11,49 @@ interface Ibinding {
     anchor?: Node;
     thunk?: () => unknown;
     isRegion?: boolean;
+    itemList?: IregionItem[];
+    controllerName?: string;
+}
+
+interface IregionItem {
+    kind: "text" | "element" | "region";
+    key: string | undefined;
+    vnode: string | IvirtualNode | (() => unknown);
+    nodeList: Node[];
+    owner: Ibinding;
+    isUsed?: boolean;
 }
 
 let bindingActive: Ibinding | null = null;
+let bindingControllerActive: string | null = null;
 const bindingSubscriberObject = {} as Record<string, Ibinding[]>;
+const regionAnchorMap = new WeakMap<Node, Ibinding>();
 const bindingFlushSet = new Set<string>();
+const bindingDirtyControllerSet = new Set<string>();
 let isBindingFlushScheduled = false;
-let bindingFlushCallback: (() => void) | null = null;
+let bindingFlushCallback: ((dirtyControllerList: string[]) => void) | null = null;
 
-export const bindingSetFlushCallback = (callback: () => void): void => {
+export const bindingSetFlushCallback = (callback: (dirtyControllerList: string[]) => void): void => {
     bindingFlushCallback = callback;
+};
+
+export const bindingSetControllerActive = (controllerName: string | null): string | null => {
+    const controllerPrevious = bindingControllerActive;
+    bindingControllerActive = controllerName;
+
+    return controllerPrevious;
+};
+
+const bindingControllerResolve = (): string | undefined => {
+    if (bindingControllerActive !== null) {
+        return bindingControllerActive;
+    }
+
+    if (bindingActive) {
+        return bindingActive.controllerName;
+    }
+
+    return undefined;
 };
 
 export const bindingTrack = (key: string): void => {
@@ -81,7 +114,10 @@ const bindingRun = (binding: Ibinding): void => {
     }
 
     bindingUnsubscribe(binding);
-    bindingDisposeChildren(binding);
+
+    if (!binding.isRegion) {
+        bindingDisposeChildren(binding);
+    }
 
     const bindingPrevious = bindingActive;
     bindingActive = binding;
@@ -92,7 +128,15 @@ const bindingRun = (binding: Ibinding): void => {
 };
 
 const bindingCreate = (node: Node, apply: () => void): Ibinding => {
-    const binding: Ibinding = { node, apply, keyList: [], childList: [], isDisposed: false, nodeList: [] };
+    const binding: Ibinding = {
+        node,
+        apply,
+        keyList: [],
+        childList: [],
+        isDisposed: false,
+        nodeList: [],
+        controllerName: bindingControllerResolve()
+    };
 
     if (bindingActive) {
         bindingActive.childList.push(binding);
@@ -139,6 +183,184 @@ const regionFlatten = (input: unknown, out: Array<IvirtualNode | string | (() =>
     }
 };
 
+const regionOwnerMake = (node: Node): Ibinding => {
+    return { node, apply: () => undefined, keyList: [], childList: [], isDisposed: false, nodeList: [], controllerName: bindingControllerResolve() };
+};
+
+const regionBindingMake = (anchor: Node, thunk: () => unknown): Ibinding => {
+    const binding: Ibinding = {
+        node: anchor,
+        anchor,
+        thunk,
+        nodeList: [],
+        keyList: [],
+        childList: [],
+        isDisposed: false,
+        isRegion: true,
+        apply: () => undefined,
+        controllerName: bindingControllerResolve()
+    };
+    binding.apply = () => regionApply(binding);
+
+    regionAnchorMap.set(anchor, binding);
+
+    return binding;
+};
+
+const regionItemCreate = (vnode: IvirtualNode | string | (() => unknown), parent: Node, reference: Node | null): IregionItem => {
+    if (typeof vnode === "function") {
+        const anchor = document.createComment("");
+        parent.insertBefore(anchor, reference);
+
+        const regionBinding = regionBindingMake(anchor, vnode);
+        bindingRun(regionBinding);
+
+        const nodeList: Node[] = [anchor];
+
+        for (let a = 0; a < regionBinding.nodeList.length; a++) {
+            nodeList.push(regionBinding.nodeList[a]);
+        }
+
+        return { kind: "region", key: undefined, vnode, nodeList, owner: regionBinding };
+    }
+
+    if (typeof vnode === "string") {
+        const textNode = document.createTextNode(vnode);
+
+        return { kind: "text", key: undefined, vnode, nodeList: [textNode], owner: regionOwnerMake(textNode) };
+    }
+
+    const owner = regionOwnerMake(document.createComment(""));
+
+    const bindingPrevious = bindingActive;
+    bindingActive = owner;
+    const elementNode = createVirtualNode(vnode);
+    bindingActive = bindingPrevious;
+
+    owner.node = elementNode;
+
+    return { kind: "element", key: vnode.key ? vnode.key : undefined, vnode, nodeList: [elementNode], owner };
+};
+
+const regionAnchorRemove = (element: Element, domIndex: number, region: Ibinding): void => {
+    const span = 1 + region.nodeList.length;
+
+    bindingDispose(region);
+
+    for (let a = 0; a < span; a++) {
+        const node = element.childNodes[domIndex];
+
+        if (node) {
+            element.removeChild(node);
+        }
+    }
+};
+
+const regionPatchChildren = (element: Element, oldList: IvirtualNode["childrenList"], newList: IvirtualNode["childrenList"]): void => {
+    const nodeMaxLength = Math.max(oldList.length, newList.length);
+
+    let domIndex = 0;
+
+    for (let a = 0; a < nodeMaxLength; a++) {
+        const oldChild = oldList[a];
+        const newChild = newList[a];
+        let nodeDom = element.childNodes[domIndex];
+
+        if (newChild === undefined) {
+            if (typeof oldChild === "function" && nodeDom && regionAnchorMap.get(nodeDom)) {
+                regionAnchorRemove(element, domIndex, regionAnchorMap.get(nodeDom) as Ibinding);
+            } else if (nodeDom) {
+                element.removeChild(nodeDom);
+            }
+
+            continue;
+        }
+
+        if (typeof newChild === "function") {
+            if (nodeDom && regionAnchorMap.get(nodeDom)) {
+                const region = regionAnchorMap.get(nodeDom) as Ibinding;
+                region.thunk = newChild;
+                bindingRun(region);
+
+                domIndex += 1 + region.nodeList.length;
+            } else {
+                const item = regionItemCreate(newChild, element, nodeDom);
+
+                for (let b = 0; b < item.nodeList.length; b++) {
+                    if (item.nodeList[b].parentNode !== element) {
+                        element.insertBefore(item.nodeList[b], nodeDom);
+                    }
+                }
+
+                if (bindingActive) {
+                    bindingActive.childList.push(item.owner);
+                }
+
+                domIndex += item.nodeList.length;
+            }
+
+            continue;
+        }
+
+        if (nodeDom && regionAnchorMap.get(nodeDom)) {
+            regionAnchorRemove(element, domIndex, regionAnchorMap.get(nodeDom) as Ibinding);
+
+            nodeDom = element.childNodes[domIndex];
+        }
+
+        if (typeof newChild === "string") {
+            if (!nodeDom) {
+                element.appendChild(document.createTextNode(newChild));
+            } else if (nodeDom.nodeType === Node.TEXT_NODE) {
+                if (nodeDom.textContent !== newChild) {
+                    nodeDom.textContent = newChild;
+                }
+            } else {
+                element.replaceChild(document.createTextNode(newChild), nodeDom);
+            }
+
+            domIndex += 1;
+
+            continue;
+        }
+
+        const isElementReusable = typeof oldChild === "object" && oldChild.tag === newChild.tag && nodeDom && nodeDom.nodeType === Node.ELEMENT_NODE;
+
+        if (isElementReusable) {
+            regionPatchElement(nodeDom as Element, oldChild as IvirtualNode, newChild);
+        } else {
+            const elementNew = createVirtualNode(newChild);
+
+            if (nodeDom) {
+                element.replaceChild(elementNew, nodeDom);
+            } else {
+                element.appendChild(elementNew);
+            }
+        }
+
+        domIndex += 1;
+    }
+};
+
+const regionPatchElement = (element: Element, oldVnode: IvirtualNode, newVnode: IvirtualNode): void => {
+    if (oldVnode.tag !== newVnode.tag) {
+        element.replaceWith(createVirtualNode(newVnode));
+
+        return;
+    }
+
+    updateProperty(element, oldVnode.propertyObject || {}, newVnode.propertyObject || {});
+
+    if ("jsmvcfw-html" in (newVnode.propertyObject || {})) {
+        return;
+    }
+
+    const oldChildrenList = Array.isArray(oldVnode.childrenList) ? oldVnode.childrenList : [];
+    const newChildrenList = Array.isArray(newVnode.childrenList) ? newVnode.childrenList : [];
+
+    regionPatchChildren(element, oldChildrenList, newChildrenList);
+};
+
 const regionApply = (binding: Ibinding): void => {
     if (!binding.anchor || !binding.thunk) {
         return;
@@ -153,91 +375,126 @@ const regionApply = (binding: Ibinding): void => {
     const vnodeListNew: Array<IvirtualNode | string | (() => unknown)> = [];
     regionFlatten(binding.thunk(), vnodeListNew);
 
-    const isTextFast =
-        vnodeListNew.length === 1 &&
-        typeof vnodeListNew[0] === "string" &&
-        binding.nodeList.length === 1 &&
-        binding.nodeList[0].nodeType === Node.TEXT_NODE;
+    const oldItemList = binding.itemList || [];
 
-    if (isTextFast) {
-        if (binding.nodeList[0].textContent !== vnodeListNew[0]) {
-            binding.nodeList[0].textContent = vnodeListNew[0] as string;
+    if (vnodeListNew.length === 1 && typeof vnodeListNew[0] === "string" && oldItemList.length === 1 && oldItemList[0].kind === "text") {
+        const textNode = oldItemList[0].nodeList[0];
+
+        if (textNode.textContent !== vnodeListNew[0]) {
+            textNode.textContent = vnodeListNew[0] as string;
         }
+
+        oldItemList[0].vnode = vnodeListNew[0];
 
         return;
     }
 
-    for (let a = 0; a < binding.nodeList.length; a++) {
-        const node = binding.nodeList[a];
+    if (binding.controllerName) {
+        bindingDirtyControllerSet.add(binding.controllerName);
+    }
 
-        if (node.parentNode) {
-            node.parentNode.removeChild(node);
+    const oldByKey = {} as Record<string, IregionItem>;
+
+    for (let a = 0; a < oldItemList.length; a++) {
+        const item = oldItemList[a];
+
+        if (item.key !== undefined && !oldByKey[item.key]) {
+            oldByKey[item.key] = item;
         }
     }
 
-    binding.nodeList = [];
+    const newItemList: IregionItem[] = [];
 
-    const reference = binding.anchor.nextSibling;
+    let pointer: Node = binding.anchor;
 
     for (let a = 0; a < vnodeListNew.length; a++) {
         const vnode = vnodeListNew[a];
 
-        if (typeof vnode === "function") {
-            const anchorChild = document.createComment("");
-            parent.insertBefore(anchorChild, reference);
-            binding.nodeList.push(anchorChild);
+        let key: string | undefined = undefined;
 
-            const bindingChild: Ibinding = {
-                node: anchorChild,
-                anchor: anchorChild,
-                thunk: vnode,
-                nodeList: [],
-                keyList: [],
-                childList: [],
-                isDisposed: false,
-                isRegion: true,
-                apply: () => undefined
-            };
-            bindingChild.apply = () => regionApply(bindingChild);
-            binding.childList.push(bindingChild);
-            bindingRun(bindingChild);
+        if (typeof vnode === "object" && vnode !== null && vnode.key) {
+            key = vnode.key;
+        }
 
-            for (let b = 0; b < bindingChild.nodeList.length; b++) {
-                binding.nodeList.push(bindingChild.nodeList[b]);
+        let item: IregionItem;
+
+        const itemReuse = key !== undefined ? oldByKey[key] : undefined;
+        const isReusable =
+            itemReuse !== undefined &&
+            !itemReuse.isUsed &&
+            typeof itemReuse.vnode === "object" &&
+            typeof vnode === "object" &&
+            itemReuse.vnode.tag === vnode.tag;
+
+        if (isReusable && itemReuse) {
+            item = itemReuse;
+            item.isUsed = true;
+
+            const bindingPrevious = bindingActive;
+            bindingActive = item.owner;
+            regionPatchElement(item.nodeList[0] as Element, item.vnode as IvirtualNode, vnode as IvirtualNode);
+            bindingActive = bindingPrevious;
+
+            item.vnode = vnode;
+        } else {
+            item = regionItemCreate(vnode, parent, pointer.nextSibling);
+        }
+
+        for (let b = 0; b < item.nodeList.length; b++) {
+            const node = item.nodeList[b];
+
+            if (pointer.nextSibling !== node) {
+                parent.insertBefore(node, pointer.nextSibling);
             }
 
-            continue;
+            pointer = node;
         }
 
-        let domNode: Node;
-
-        if (typeof vnode === "string") {
-            domNode = document.createTextNode(vnode);
-        } else {
-            domNode = createVirtualNode(vnode);
-        }
-
-        parent.insertBefore(domNode, reference);
-        binding.nodeList.push(domNode);
+        newItemList.push(item);
     }
+
+    for (let a = 0; a < oldItemList.length; a++) {
+        const item = oldItemList[a];
+
+        if (!item.isUsed) {
+            const removeList = item.kind === "region" ? [item.owner.node].concat(item.owner.nodeList) : item.nodeList;
+
+            bindingDispose(item.owner);
+
+            for (let b = 0; b < removeList.length; b++) {
+                const node = removeList[b];
+
+                if (node.parentNode) {
+                    node.parentNode.removeChild(node);
+                }
+            }
+        }
+    }
+
+    const newChildList: Ibinding[] = [];
+    const flatNodeList: Node[] = [];
+
+    for (let a = 0; a < newItemList.length; a++) {
+        const item = newItemList[a];
+        item.isUsed = false;
+
+        newChildList.push(item.owner);
+
+        for (let b = 0; b < item.nodeList.length; b++) {
+            flatNodeList.push(item.nodeList[b]);
+        }
+    }
+
+    binding.itemList = newItemList;
+    binding.childList = newChildList;
+    binding.nodeList = flatNodeList;
 };
 
 const bindingCreateRegion = (parentElement: Element, thunk: () => unknown): Ibinding => {
     const anchor = document.createComment("");
     parentElement.appendChild(anchor);
 
-    const binding: Ibinding = {
-        node: anchor,
-        anchor,
-        thunk,
-        nodeList: [],
-        keyList: [],
-        childList: [],
-        isDisposed: false,
-        isRegion: true,
-        apply: () => undefined
-    };
-    binding.apply = () => regionApply(binding);
+    const binding = regionBindingMake(anchor, thunk);
 
     if (bindingActive) {
         bindingActive.childList.push(binding);
@@ -290,8 +547,11 @@ const bindingFlush = (): void => {
         bindingRun(binding);
     }
 
+    const dirtyControllerList = [...bindingDirtyControllerSet];
+    bindingDirtyControllerSet.clear();
+
     if (bindingFlushCallback) {
-        bindingFlushCallback();
+        bindingFlushCallback(dirtyControllerList);
     }
 };
 
@@ -334,8 +594,10 @@ export const bindingReset = (): void => {
     }
 
     bindingFlushSet.clear();
+    bindingDirtyControllerSet.clear();
     isBindingFlushScheduled = false;
     bindingActive = null;
+    bindingControllerActive = null;
 };
 
 const safeHtml = (html: string): string => {

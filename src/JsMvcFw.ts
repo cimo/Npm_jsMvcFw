@@ -18,7 +18,8 @@ import {
     bindingNotify,
     bindingReset,
     bindingHasController,
-    bindingSetFlushCallback
+    bindingSetFlushCallback,
+    bindingSetControllerActive
 } from "./JsMvcFwDom.js";
 import Emitter from "./JsMvcFwEmitter.js";
 
@@ -78,47 +79,51 @@ const variableChange = (controllerName: string, label: string): void => {
     }
 };
 
-const subControllerRefill = (): void => {
-    const controllerNameList = Object.keys(renderTriggerObject);
+const controllerInstanceMap = (): Record<string, Icontroller> => {
+    const controllerInstanceObject = {} as Record<string, Icontroller>;
 
-    for (let a = 0; a < controllerNameList.length; a++) {
-        const controllerName = controllerNameList[a];
-        const containerList = document.querySelectorAll(`[jsmvcfw-controllerName="${controllerName}"]`);
-
-        let isRefillNeeded = false;
-
-        for (let b = 0; b < containerList.length; b++) {
-            if (!containerList[b].firstElementChild) {
-                isRefillNeeded = true;
-
-                break;
-            }
-        }
-
-        if (isRefillNeeded) {
-            renderTriggerObject[controllerName]();
-        }
-    }
-};
-
-const elementHookRefresh = (): void => {
     for (let a = 0; a < controllerList.length; a++) {
         const controllerAll = [controllerList[a].parent, ...controllerList[a].childrenList];
 
         for (let b = 0; b < controllerAll.length; b++) {
-            const controllerValue = controllerAll[b];
-            const containerList = document.querySelectorAll(`[jsmvcfw-controllerName="${controllerValue.constructor.name}"]`);
+            controllerInstanceObject[controllerAll[b].constructor.name] = controllerAll[b];
+        }
+    }
 
-            for (let c = 0; c < containerList.length; c++) {
-                elementHook(containerList[c], controllerValue);
+    return controllerInstanceObject;
+};
+
+const bindingAfterFlush = (dirtyControllerList: string[]): void => {
+    if (dirtyControllerList.length === 0) {
+        return;
+    }
+
+    const controllerInstanceObject = controllerInstanceMap();
+
+    for (let a = 0; a < dirtyControllerList.length; a++) {
+        const controllerName = dirtyControllerList[a];
+        const containerList = document.querySelectorAll(`[jsmvcfw-controllerName="${controllerName}"]`);
+        const controllerValue = controllerInstanceObject[controllerName];
+
+        for (let b = 0; b < containerList.length; b++) {
+            const container = containerList[b];
+
+            if (controllerValue) {
+                elementHook(container, controllerValue);
+            }
+
+            const subContainerList = container.querySelectorAll("[jsmvcfw-controllerName]");
+
+            for (let c = 0; c < subContainerList.length; c++) {
+                const subContainer = subContainerList[c];
+                const subControllerName = subContainer.getAttribute("jsmvcfw-controllername");
+
+                if (subControllerName && renderTriggerObject[subControllerName] && !subContainer.firstElementChild) {
+                    renderTriggerObject[subControllerName]();
+                }
             }
         }
     }
-};
-
-const bindingAfterFlush = (): void => {
-    subControllerRefill();
-    elementHookRefresh();
 };
 
 bindingSetFlushCallback(bindingAfterFlush);
@@ -459,6 +464,8 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
     };
 
     const renderTrigger = (): void => {
+        const controllerPrevious = bindingSetControllerActive(controllerName);
+
         if (!controllerParent) {
             let virtualNodeNew = controllerValue.view();
             virtualNodeNew = normalizeVirtualNode(virtualNodeNew);
@@ -499,6 +506,8 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
             virtualNodeObject[controllerName] = virtualNodeNew;
             elementHook(elementRoot, controllerValue);
             renderSubControllerList();
+
+            bindingSetControllerActive(controllerPrevious);
 
             return;
         }
@@ -552,6 +561,8 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
                 }
             }
 
+            bindingSetControllerActive(controllerPrevious);
+
             return;
         }
 
@@ -602,6 +613,8 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
         }
 
         renderSubControllerList();
+
+        bindingSetControllerActive(controllerPrevious);
     };
 
     renderTriggerObject[controllerName] = renderTrigger;
