@@ -28,6 +28,7 @@ let bindingActive: Ibinding | null = null;
 let bindingControllerActive: string | null = null;
 const bindingSubscriberObject = {} as Record<string, Ibinding[]>;
 const regionAnchorMap = new WeakMap<Node, Ibinding>();
+const attributeBindingMap = new WeakMap<Element, Record<string, Ibinding>>();
 const bindingFlushSet = new Set<string>();
 const bindingDirtyControllerSet = new Set<string>();
 let isBindingFlushScheduled = false;
@@ -145,6 +146,31 @@ const bindingCreate = (node: Node, apply: () => void): Ibinding => {
     bindingRun(binding);
 
     return binding;
+};
+
+const attributeBindingCreate = (element: Element, key: string, value: () => TvirtualNodeProperty): void => {
+    const binding = bindingCreate(element, () => {
+        applyProperty(element, key, value());
+    });
+
+    let bindingObject = attributeBindingMap.get(element);
+
+    if (!bindingObject) {
+        bindingObject = {};
+        attributeBindingMap.set(element, bindingObject);
+    }
+
+    bindingObject[key] = binding;
+};
+
+const attributeBindingDispose = (element: Element, key: string): void => {
+    const bindingObject = attributeBindingMap.get(element);
+
+    if (bindingObject && bindingObject[key]) {
+        bindingDispose(bindingObject[key]);
+
+        delete bindingObject[key];
+    }
 };
 
 const regionFlatten = (input: unknown, out: Array<IvirtualNode | string | (() => unknown)>): void => {
@@ -722,6 +748,8 @@ const updateProperty = (element: Element, oldObject: Record<string, TvirtualNode
             } else if (key.startsWith("on") && typeof oldObject[key] === "function") {
                 element.removeEventListener(key.slice(2).toLowerCase(), oldObject[key]);
             } else {
+                attributeBindingDispose(element, key);
+
                 element.removeAttribute(key);
             }
         }
@@ -736,7 +764,12 @@ const updateProperty = (element: Element, oldObject: Record<string, TvirtualNode
 
         const valueOld = oldObject[key];
 
-        if (value !== valueOld) {
+        if (typeof value === "function" && !key.startsWith("on")) {
+            if (value !== valueOld) {
+                attributeBindingDispose(element, key);
+                attributeBindingCreate(element, key, value as () => TvirtualNodeProperty);
+            }
+        } else if (value !== valueOld) {
             applyProperty(element, key, value, valueOld);
         }
     }
@@ -865,9 +898,7 @@ export const createVirtualNode = (node: IvirtualNode): HTMLElement => {
         const [key, value] = entryList[a];
 
         if (typeof value === "function" && !key.startsWith("on")) {
-            bindingCreate(element, () => {
-                applyProperty(element, key, (value as () => TvirtualNodeProperty)());
-            });
+            attributeBindingCreate(element, key, value as () => TvirtualNodeProperty);
         } else {
             applyProperty(element, key, value);
         }
