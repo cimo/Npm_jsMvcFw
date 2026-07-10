@@ -792,7 +792,7 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
         }
     }
 
-    const isControllerNameRemovable = (nodeDom: Node): boolean => {
+    const controllerNameRemovableCheck = (nodeDom: Node): boolean => {
         if (nodeDom.nodeType !== Node.ELEMENT_NODE) {
             return true;
         }
@@ -826,7 +826,7 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
         const nodeDom = element.childNodes[a];
 
         if (!nodeNew && nodeDom) {
-            if (isControllerNameRemovable(nodeDom)) {
+            if (controllerNameRemovableCheck(nodeDom)) {
                 element.removeChild(nodeDom);
             }
 
@@ -881,7 +881,7 @@ const updateChildren = (element: Element, nodeOldListValue: IvirtualNode["childr
     while (element.childNodes.length > nodeNewList.length) {
         const nodeExtra = element.childNodes[nodeNewList.length];
 
-        if (isControllerNameRemovable(nodeExtra)) {
+        if (controllerNameRemovableCheck(nodeExtra)) {
             element.removeChild(nodeExtra);
         } else {
             break;

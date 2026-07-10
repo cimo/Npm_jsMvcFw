@@ -1,7 +1,7 @@
 // Source
 import { getAppLabel } from "./JsMvcFw.js";
 
-const isJson = (value: string): boolean => {
+const jsonCheck = (value: string): boolean => {
     try {
         JSON.parse(value);
 
@@ -40,7 +40,7 @@ export const readCookie = <T>(tag: string): T | undefined => {
 
         const decodeUriCookie = decodeURIComponent(cookie);
 
-        if (isJson(decodeUriCookie)) {
+        if (jsonCheck(decodeUriCookie)) {
             result = JSON.parse(decodeUriCookie) as T;
         } else {
             result = decodeUriCookie as T;

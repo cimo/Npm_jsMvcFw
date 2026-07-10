@@ -430,7 +430,7 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
     controllerValue.variable();
 
-    const renderSubControllerList = (): void => {
+    const renderSubController = (): void => {
         if (!controllerValue.subControllerList) {
             return;
         }
@@ -505,7 +505,7 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
 
             virtualNodeObject[controllerName] = virtualNodeNew;
             elementHook(elementRoot, controllerValue);
-            renderSubControllerList();
+            renderSubController();
 
             bindingSetControllerActive(controllerPrevious);
 
@@ -612,7 +612,7 @@ export const renderTemplate = (controllerValue: Icontroller, controllerParent?: 
             callback();
         }
 
-        renderSubControllerList();
+        renderSubController();
 
         bindingSetControllerActive(controllerPrevious);
     };

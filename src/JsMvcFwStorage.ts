@@ -1,7 +1,7 @@
 // Source
 import { getAppLabel } from "./JsMvcFw.js";
 
-const isJson = (value: string): boolean => {
+const jsonCheck = (value: string): boolean => {
     try {
         JSON.parse(value);
 
@@ -25,7 +25,7 @@ export const readStorage = <T>(tag: string): T | undefined => {
     if (storage) {
         const decoded = decodeURIComponent(window.atob(storage));
 
-        if (isJson(decoded)) {
+        if (jsonCheck(decoded)) {
             result = JSON.parse(decoded) as T;
         }
     }
