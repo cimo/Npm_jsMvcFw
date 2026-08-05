@@ -19,6 +19,14 @@ It provides a clear structure and integrated tools to create reusable components
 ## Installation
 1. Link for npm package -> https://www.npmjs.com/package/@cimo/jsmvcfw
 
+## Reset
+1. Delete this from the root:
+    - build
+    - dist
+    - node_modules
+
+2. Follow the "Installation" instructions.
+
 ## Example
 1. In this repository are present the app example with all wiki and example:
 
