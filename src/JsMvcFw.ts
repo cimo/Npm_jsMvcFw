@@ -700,6 +700,10 @@ export const variableBind = <T extends Record<string, unknown>>(
     inputObject: TvariableBindInput<T>,
     controllerName: string
 ): { [A in keyof T]: IvariableBind<T[A]> } => {
+    if (controllerName === "__proto__" || controllerName === "constructor" || controllerName === "prototype") {
+        throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableBind() => Invalid controller name "${controllerName}"!`);
+    }
+
     const resultObject = {} as { [A in keyof T]: IvariableBind<T[A]> };
 
     if (!variableLoadedObject[controllerName]) {
@@ -716,6 +720,10 @@ export const variableBind = <T extends Record<string, unknown>>(
     for (let a = 0; a < keyList.length; a++) {
         const keyTyped = keyList[a];
         const key = String(keyTyped);
+
+        if (key === "__proto__" || key === "constructor" || key === "prototype") {
+            throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableBind() => Invalid variable label "${key}"!`);
+        }
 
         if (variableLoadedObject[controllerName].includes(key)) {
             throw new Error(`@cimo/jsmvcfw - JsMvcFw.ts - variableBind() => The method variableBind use existing label "${key}"!`);
