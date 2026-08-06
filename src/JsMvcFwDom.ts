@@ -660,11 +660,11 @@ const safeHtml = (html: string): string => {
             if (name === "href" || name === "src" || name === "xlink:href" || name === "action" || name === "formaction") {
                 const normalized = value.replace(/\s+/g, "").toLowerCase();
 
-                const isJs = normalized.startsWith("javascript:");
+                const isScript = normalized.startsWith("javascript:") || normalized.startsWith("vbscript:");
                 const isHtmlData = normalized.startsWith("data:text/html");
                 const isUnsafeData = normalized.startsWith("data:") && !normalized.startsWith("data:image/");
 
-                if (isJs || isHtmlData || isUnsafeData) {
+                if (isScript || isHtmlData || isUnsafeData) {
                     element.removeAttribute(attribute.name);
                 }
             }
