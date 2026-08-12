@@ -23,6 +23,7 @@ It provides a clear structure and integrated tools to create reusable components
 1. Delete this from the root:
     - dist
     - node_modules
+    - package-lock.json
 
 ## Example
 1. In this repository are present the app example with all wiki and example:
